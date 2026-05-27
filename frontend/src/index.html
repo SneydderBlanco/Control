@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Aura Finance - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind = {
+            config: {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        colors: {
+                            "background": "#131315",
+                            "primary": "#adc6ff",
+                            "surface": "#131315",
+                            "surface-container": "#1f1f21",
+                            "on-surface-variant": "#c2c6d6",
+                            "error": "#ffb4ab",
+                            "error-container": "#93000a",
+                            "secondary-container": "#571bc1",
+                            "on-secondary-container": "#c4abff",
+                            "outline-variant": "#424754"
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700;800&family=JetBrains+Mono:wght=500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark overflow-hidden">
+
+    <aside class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50">
+        <div class="mb-8 px-4 py-2">
+            <h1 class="font-headline-md text-headline-md font-bold text-primary">Aura Finance</h1>
+            <p class="text-on-surface-variant font-label-md text-label-md">Gestión Patrimonial</p>
+        </div>
+        <nav class="flex flex-col gap-1">
+            <a id="menu-inicio" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold transition-transform scale-98 active:scale-95 cursor-pointer" href="#">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+                <span class="font-label-md text-label-md">Inicio</span>
+            </a>
+            <a id="menu-finanzas" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">account_balance</span>
+                <span class="font-label-md text-label-md">Finanzas</span>
+            </a>
+            <a id="menu-deudas" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">credit_card</span>
+                <span class="font-label-md text-label-md">Deudas</span>
+            </a>
+            <a id="menu-suscripciones" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">subscriptions</span>
+                <span class="font-label-md text-label-md">Suscripciones</span>
+            </a>
+            <a id="menu-ingresos" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">payments</span>
+                <span class="font-label-md text-label-md">Ingresos</span>
+            </a>
+            <a id="menu-egresos" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span class="font-label-md text-label-md">Egresos</span>
+            </a>
+            <div class="mt-auto">
+                <a id="menu-configuracion" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span class="font-label-md text-label-md">Configuración</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="ml-64 min-h-screen relative bg-background">
+        <header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 flex justify-between items-center h-20 px-[40px] bg-background/70 backdrop-blur-xl border-b border-outline-variant">
+            <div class="flex items-center gap-6">
+                <div class="flex flex-col">
+                    <h2 class="font-headline-lg text-headline-lg text-on-background">¡Bienvenido, Christian!</h2>
+                    <p class="text-on-surface-variant font-body-md text-body-md">Cargando fecha...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative group">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-outline">
+                        <span class="material-symbols-outlined text-[20px]">search</span>
+                    </span>
+                    <input class="bg-surface-container border-none rounded-full pl-10 pr-4 py-2 w-64 text-sm focus:ring-1 focus:ring-primary transition-all" placeholder="Buscar análisis..." type="text"/>
+                </div>
+                <button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button id="btn-header-calendario" class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                    <span class="material-symbols-outlined">calendar_today</span>
+                </button>
+                <div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant bg-surface-container flex items-center justify-center text-sm font-bold text-primary">
+                    C
+                </div>
+            </div>
+        </header>
+ 
+        <section class="pt-28 px-[40px] pb-12 h-screen overflow-y-auto scroll-hide">
+            <div id="dashboard-principal" class="space-y-10">
+                <div class="grid grid-cols-12 gap-6 mb-10">
+                    <div class="col-span-12 lg:col-span-6 glass-panel rounded-3xl p-8 premium-card-glow bg-gradient-to-br from-surface to-background flex flex-col justify-between min-h-[220px]">
+                        <div>
+                            <p class="font-label-md text-label-md text-primary tracking-[0.1em] uppercase mb-2">Balance Total</p>
+                            <h3 class="font-display-lg text-display-lg text-primary-fixed leading-tight" id="balance-html">$0</h3>
+                        </div>
+                        <div id="last-month-metric-container" class="flex items-center gap-2 mt-4">
+                            <span class="text-green-400 flex items-center gap-1 font-label-md text-label-md">
+                                <span class="material-symbols-outlined text-[14px]">trending_up</span> +12.5%
+                            </span>
+                            <span class="text-on-surface-variant font-label-md text-label-md">vs mes anterior</span>
+                        </div>
+                    </div>
+
+                    <div class="col-span-12 md:col-span-6 lg:col-span-3 glass-panel rounded-3xl p-6 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Deudas Totales</p>
+                                <span class="material-symbols-outlined text-on-surface-variant opacity-50">credit_card</span>
+                            </div>
+                            <h3 class="font-headline-lg text-headline-lg mt-4 text-on-surface" id="deudas-totales-html">$0</h3>
+                        </div>
+                        <div class="w-full bg-outline-variant/30 h-1.5 rounded-full mt-6 overflow-hidden">
+                            <div id="barra-progreso-deudas" class="bg-error h-full" style="width: 0%;"></div>
+                        </div>
+                        <p id="porcentaje-limite-texto" class="mt-2 font-label-sm text-label-sm text-on-surface-variant">0% del límite utilizado</p>
+                    </div>
+
+                    <div class="col-span-12 md:col-span-6 lg:col-span-3 glass-panel rounded-3xl p-6 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Pagos del Mes</p>
+                                <span class="material-symbols-outlined text-on-surface-variant opacity-50">calendar_month</span>
+                            </div>
+                            <h3 id="pagos-mes-html" class="font-headline-lg text-headline-lg mt-4 text-secondary-fixed">$0</h3>
+                        </div>
+                        <div class="mt-6 flex items-center justify-between">
+                            <div class="flex -space-x-2">
+                                <div class="w-8 h-8 rounded-full border-2 border-background bg-secondary-container flex items-center justify-center text-[10px] font-bold">N</div>
+                                <div class="w-8 h-8 rounded-full border-2 border-background bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">J</div>
+                            </div>
+                            <span id="pagos-pendientes-contador-html" class="text-on-surface-variant font-label-sm text-label-sm">0 pendientes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-8">
+                    <div class="col-span-12 lg:col-span-8 flex flex-col gap-8">
+                        <section>
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-headline-md text-headline-md text-on-surface">Próximos pagos</h4>
+                                <button id="btn-ver-calendario" class="text-primary font-label-md text-label-md hover:underline">Ver calendario</button>
+                            </div>
+                            <div class="flex gap-4 overflow-x-auto pb-4 scroll-hide" id="proximos-pagos-container"></div>
+                        </section>
+
+                        <section class="glass-panel rounded-3xl overflow-hidden">
+                            <div class="p-6 border-b border-outline-variant flex justify-between items-center">
+                                <h4 class="font-headline-md text-headline-md text-on-surface">Deudas pendientes</h4>
+                                <span class="material-symbols-outlined text-on-surface-variant cursor-pointer">filter_list</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-surface-container-low">
+                                        <tr>
+                                            <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase">Entidad</th>
+                                            <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase">Monto Total</th>
+                                            <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase">Restante</th>
+                                            <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase">Vencimiento</th>
+                                            <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-outline-variant/30" id="tabla-deudas-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="col-span-12 lg:col-span-4">
+                        <section class="glass-panel rounded-3xl p-6 h-full">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="font-headline-md text-headline-md text-on-surface">Actividad reciente</h4>
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high">
+                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                                </button>
+                            </div>
+                            <div class="space-y-6" id="actividad-reciente-container"></div>
+                            <button id="btn-ver-historial" class="w-full mt-8 py-3 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all uppercase tracking-widest">
+                                Ver historial completo
+                            </button>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel del Calendario Mensual Interactiva [NUEVO] -->
+            <div id="calendario-seccion" class="hidden flex flex-col gap-6">
+                <!-- Cabecera del Calendario -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <div class="flex items-center gap-4">
+                        <button type="button" id="btn-calendario-prev" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container border border-outline-variant text-on-surface hover:bg-surface-container-high hover:scale-105 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+                        </button>
+                        <h3 id="calendario-mes-titulo" class="font-headline-md text-headline-md font-bold text-primary min-w-[200px] text-center tracking-wider">Mayo 2026</h3>
+                        <button type="button" id="btn-calendario-next" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container border border-outline-variant text-on-surface hover:bg-surface-container-high hover:scale-105 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                        </button>
+                    </div>
+                    
+                    <button type="button" id="btn-cerrar-calendario" class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-on-surface-variant font-bold text-xs hover:bg-surface-container-high hover:text-on-surface transition-all uppercase tracking-wider active:scale-98">
+                        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                        <span>Volver al Dashboard</span>
+                    </button>
+                </div>
+
+                <!-- Cuerpo del Calendario -->
+                <div class="glass-panel rounded-3xl p-6 flex flex-col gap-4 border border-outline-variant/30">
+                    <!-- Cabecera Días de la Semana -->
+                    <div class="grid grid-cols-7 gap-3 text-center border-b border-outline-variant/30 pb-3">
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Lun</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Mar</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Mié</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Jue</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Vie</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Sáb</div>
+                        <div class="font-label-md text-label-md text-on-surface-variant font-bold uppercase tracking-wider text-xs">Dom</div>
+                    </div>
+
+                    <!-- Cuadrícula Mensual -->
+                    <div id="calendario-grid" class="grid grid-cols-7 gap-3">
+                        <!-- Generado dinámicamente con JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel del Historial Completo de Transacciones [NUEVO] -->
+            <div id="historial-seccion" class="hidden flex flex-col gap-6">
+                <!-- Cabecera del Historial -->
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <h3 id="historial-titulo" class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Historial de Transacciones</h3>
+                    
+                    <button type="button" id="btn-cerrar-historial" class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-on-surface-variant font-bold text-xs hover:bg-surface-container-high hover:text-on-surface transition-all uppercase tracking-wider active:scale-98">
+                        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                        <span>Volver al Dashboard</span>
+                    </button>
+                </div>
+
+                <!-- Tabla del Historial -->
+                <div class="glass-panel rounded-3xl overflow-hidden border border-outline-variant/30">
+                    <div class="overflow-x-auto max-h-[60vh] overflow-y-auto scroll-hide">
+                        <table class="w-full text-left">
+                            <thead class="bg-surface-container-low sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase text-xs tracking-wider">Fecha / Hora</th>
+                                    <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase text-xs tracking-wider">Descripción</th>
+                                    <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase text-xs tracking-wider">Tipo</th>
+                                    <th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase text-xs tracking-wider">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-outline-variant/30" id="tabla-historial-body">
+                                <!-- Generado dinámicamente con JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Finanzas [NUEVO] -->
+            <div id="finanzas-seccion" class="hidden flex flex-col gap-6">
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <h3 class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Mis Finanzas y Cuentas</h3>
+                    <span class="material-symbols-outlined text-primary opacity-50 text-[24px]">account_balance_wallet</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="cuentas-desglosadas-grid">
+                    <!-- Generado dinámicamente con JS -->
+                </div>
+            </div>
+
+            <!-- Panel de Deudas [NUEVO] -->
+            <div id="deudas-seccion" class="hidden flex flex-col gap-6">
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <h3 class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Deudas Registradas</h3>
+                    <span class="material-symbols-outlined text-primary opacity-50 text-[24px]">credit_card</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="deudas-desglosadas-grid">
+                    <!-- Generado dinámicamente con JS -->
+                </div>
+            </div>
+
+            <!-- Panel de Suscripciones [NUEVO] -->
+            <div id="suscripciones-seccion" class="hidden flex flex-col gap-6">
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <h3 class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Mis Suscripciones Mensuales</h3>
+                    <span class="material-symbols-outlined text-primary opacity-50 text-[24px]">subscriptions</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="suscripciones-desglosadas-grid">
+                    <!-- Generado dinámicamente con JS -->
+                </div>
+            </div>
+
+            <!-- Panel de Configuración [NUEVO] -->
+            <div id="configuracion-seccion" class="hidden flex flex-col gap-6">
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl">
+                    <h3 class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Configuración de Usuario</h3>
+                    <span class="material-symbols-outlined text-primary opacity-50 text-[24px]">settings</span>
+                </div>
+                <div class="glass-panel rounded-3xl p-8 flex flex-col gap-6 max-w-xl border border-outline-variant/30">
+                    <div class="flex items-center gap-6 pb-6 border-b border-outline-variant/30">
+                        <div class="w-20 h-20 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-3xl">C</div>
+                        <div class="flex flex-col">
+                            <h4 class="font-headline-md text-headline-md font-bold text-on-surface">Christian</h4>
+                            <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider mt-0.5">Administrador de Cuenta</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-4">
+                        <h5 class="font-title-md text-title-md text-primary font-bold">Límites y Alertas</h5>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Límite Máximo de Deuda Alerta</label>
+                            <input type="text" readonly value="$1,000,000 COP" class="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-sm w-full outline-none text-on-surface font-semibold" />
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-4 mt-2">
+                        <h5 class="font-title-md text-title-md text-primary font-bold">Información de Sistema</h5>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <span class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Base de Datos</span>
+                                <span class="text-xs text-on-surface font-medium">PostgreSQL (Puerto 5432)</span>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <span class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Backend Servidor</span>
+                                <span class="text-xs text-on-surface font-medium">Node.js Express (Puerto 5000)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <button id="fab-add-button" class="fixed bottom-8 right-8 w-14 h-14 rounded-2xl bg-primary text-on-primary shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 600;">add</span>
+        </button>
+    </main>
+
+    <div id="modal-obligacion" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] hidden">
+        <div class="glass-panel max-w-md w-full mx-4 rounded-3xl p-6 flex flex-col justify-between shadow-2xl bg-gradient-to-br from-surface to-background border border-outline-variant relative h-[98vh] overflow-y-auto scroll-hide">
+            <div>
+                <h3 id="modal-titulo" class="font-headline-md text-headline-md font-bold text-primary mb-0.5">Registrar</h3>
+                <p id="modal-descripcion" class="text-on-surface-variant font-body-sm text-body-sm">Elige el tipo de movimiento a registrar en tu cuenta.</p>
+            </div>
+
+            <div class="flex border-b border-outline-variant gap-4 mt-6 mb-8">
+                <button type="button" id="tab-obligacion" class="flex-1 pb-2 text-xs font-bold text-primary border-b-2 border-primary uppercase tracking-wider text-center transition-all">Obligación</button>
+                <button type="button" id="tab-ingreso" class="flex-1 pb-2 text-xs font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider text-center transition-all">Ingreso</button>
+                <button type="button" id="tab-egreso" class="flex-1 pb-2 text-xs font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider text-center transition-all">Egreso</button>
+            </div>
+            
+            <input type="hidden" id="modal-tab-active" value="obligacion" />
+            
+            <form id="form-obligacion" class="flex-1 flex flex-col gap-4">
+                <div class="flex flex-col gap-5 mt-2 flex-grow">
+                    <input type="hidden" id="modal-item-id" name="item_id" value="" />
+                    <input type="hidden" id="modal-mode" name="mode" value="create" />
+                    <input type="hidden" id="modal-item-type" name="item_type" value="" />
+                    
+                    <div id="wrapper-categoria-select" class="flex flex-col gap-1 hidden">
+                        <label for="categoria" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Categoría</label>
+                        <select id="categoria" name="categoria"
+                                class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface">
+                            <option value="Alimentación">Alimentación</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Parqueadero">Parqueadero</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+
+                    <div id="wrapper-entidad-input" class="flex flex-col gap-1">
+                        <label id="label-entidad" for="entidad" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Entidad / Nombre</label>
+                        <input type="text" id="entidad" name="entidad" required placeholder="Ej: Netflix, Tarjeta Visa, Alquiler" 
+                               class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface"/>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <label id="label-monto" for="monto_total" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Monto Total</label>
+                        <input type="number" id="monto_total" name="monto_total" required min="1" placeholder="COP"
+                               class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface"/>
+                    </div>
+
+                    <div id="wrapper-cuenta-select" class="flex flex-col gap-1 hidden">
+                        <label for="cuenta_id" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Cuenta / Canal</label>
+                        <select id="cuenta_id" name="cuenta_id"
+                                class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface">
+                            <option value="1">Efectivo</option>
+                            <option value="2">Nequi</option>
+                            <option value="3">Bancolombia</option>
+                        </select>
+                    </div>
+
+                    <div id="wrapper-campos-obligacion" class="flex flex-col gap-5 flex-grow">
+                        <div id="wrapper-fecha-vencimiento" class="flex flex-col gap-1">
+                            <label id="label-fecha-vencimiento" for="fecha_vencimiento" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Vencimiento</label>
+                            <input type="date" id="fecha_vencimiento" name="fecha_vencimiento" required 
+                                   class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface"/>
+                        </div>
+
+                        <div id="wrapper-dia-suscripcion" class="flex flex-col gap-1 hidden">
+                            <label for="dia_suscripcion_select" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Día de pago mensual</label>
+                            <select id="dia_suscripcion_select" name="dia_suscripcion_select"
+                                    class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface">
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label for="tipo" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Tipo</label>
+                                <select id="tipo" name="tipo" required 
+                                        class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface">
+                                    <option value="deuda">Deuda</option>
+                                    <option value="suscripcion">Suscripción</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label for="categoria_icono" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Icono</label>
+                                <select id="categoria_icono" name="categoria_icono" required 
+                                        class="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface">
+                                    <option value="account_balance">Banco (deudas)</option>
+                                    <option value="credit_card">Tarjeta (crédito)</option>
+                                    <option value="live_tv">Televisión (stream)</option>
+                                    <option value="subscriptions">Suscripción (general)</option>
+                                    <option value="person">Personal</option>
+                                    <option value="payments">Pagos (otros)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-outline-variant/30">
+                    <div>
+                        <button type="button" id="btn-eliminar-modal"
+                                class="px-4 py-2 rounded-xl bg-error-container/30 text-error font-bold text-xs hover:bg-error/20 transition-all border border-error/20 text-center whitespace-nowrap hidden">
+                            Cancelar Suscripción
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" id="btn-cancelar-modal" 
+                                class="px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant font-medium text-xs hover:bg-surface-container-highest transition-all text-center whitespace-nowrap">
+                            Cancelar
+                        </button>
+                        <button type="button" id="btn-pagar-suscripcion"
+                                class="px-4 py-2 rounded-xl bg-green-400/20 text-green-400 font-bold text-xs hover:bg-green-400/30 transition-all border border-green-400/20 text-center whitespace-nowrap hidden">
+                            Marcar como Pagada
+                        </button>
+                        <button type="submit" id="btn-guardar-modal"
+                                class="px-4 py-2 rounded-xl bg-primary text-background font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg text-center whitespace-nowrap">
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

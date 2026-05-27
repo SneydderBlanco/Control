@@ -1,0 +1,90 @@
+body {
+    background-color: #0A0A0B;
+    color: #E4E2E4;
+    font-family: 'Inter', sans-serif;
+}
+
+.glass-panel {
+    background: rgba(20, 20, 21, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.premium-card-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-card-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(173, 198, 255, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.scroll-hide::-webkit-scrollbar {
+    display: none;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Configuración de la paleta Dark Premium del proyecto */
+:root {
+    --background: #0A0A0B;
+    --surface: #131315;
+    --surface-container: #1f1f21;
+    --primary: #adc6ff;
+    --on-surface-variant: #c2c6d6;
+    --error: #ffb4ab;
+    --error-container: #93000a;
+    --secondary-container: #571bc1;
+    --on-secondary-container: #c4abff;
+    --outline-variant: #424754;
+}
+
+body {
+    background-color: var(--background);
+    color: #E4E2E4;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Efecto translúcido Glassmorphism */
+.glass-panel {
+    background: rgba(20, 20, 21, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Brillo interactivo Premium en las tarjetas bento */
+.premium-card-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-card-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(173, 198, 255, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* Utilidad para esconder barras de scroll en contenedores fluidos */
+.scroll-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scroll-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
