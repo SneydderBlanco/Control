@@ -87,3 +87,97 @@ export async function eliminarRegistro(id, tipo) {
         return null;
     }
 }
+
+// ==========================================
+// MÓDULO DE INVERSIONES (APUESTAS - BETPLAY)
+// ==========================================
+
+export async function fetchInversionesData() {
+    try {
+        const response = await fetch(`${API_URL}/inversiones`);
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error al conectar con la API de inversiones:', error);
+        return null;
+    }
+}
+
+export async function actualizarSaldoBetPlay(monto, tipoMovimiento) {
+    try {
+        const response = await fetch(`${API_URL}/inversiones/saldo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ monto, tipo_movimiento: tipoMovimiento })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al actualizar el saldo de BetPlay');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error al enviar actualización de saldo:', error);
+        throw error;
+    }
+}
+
+export async function crearApuesta(data) {
+    try {
+        const response = await fetch(`${API_URL}/inversiones/apuestas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al registrar la apuesta');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error al registrar apuesta:', error);
+        throw error;
+    }
+}
+
+export async function actualizarEstadoApuesta(id, nuevoEstado) {
+    try {
+        const response = await fetch(`${API_URL}/inversiones/apuestas/${id}/estado`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nuevoEstado })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al resolver la apuesta');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error al resolver apuesta:', error);
+        throw error;
+    }
+}
+
+export async function eliminarApuesta(id) {
+    try {
+        const response = await fetch(`${API_URL}/inversiones/apuestas/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Error al eliminar la apuesta');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error al eliminar apuesta:', error);
+        throw error;
+    }
+}
+

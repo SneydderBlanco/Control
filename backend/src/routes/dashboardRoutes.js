@@ -6,21 +6,37 @@ const {
   updateObligacion,
   deleteObligacion,
   updateTransaccion,
-  deleteTransaccion
+  deleteTransaccion,
+  getInversionesData,
+  actualizarSaldoBetPlay,
+  crearApuesta,
+  actualizarEstadoApuesta,
+  eliminarApuesta
 } = require('../controllers/dashboardController');
 
 const router = express.Router();
 
-// Rutas de lectura y creación
+// ==========================================
+// MÓDULO FINANCIERO (PATRIMONIO)
+// ==========================================
 router.get('/dashboard', getDashboardData);
 router.post('/obligaciones', createObligacion);
 router.post('/transacciones', createTransaccion);
 
-// Nuevas rutas de actualización (PUT) y eliminación (DELETE)
 router.put('/obligaciones/:id', updateObligacion);
 router.delete('/obligaciones/:id', deleteObligacion);
 
 router.put('/transacciones/:id', updateTransaccion);
 router.delete('/transacciones/:id', deleteTransaccion);
 
+// ==========================================
+// MÓDULO DE INVERSIONES (APUESTAS - BETPLAY)
+// ==========================================
+router.get('/inversiones', getInversionesData);
+router.post('/inversiones/saldo', actualizarSaldoBetPlay);
+router.post('/inversiones/apuestas', crearApuesta);
+router.put('/inversiones/apuestas/:id/estado', actualizarEstadoApuesta);
+router.delete('/inversiones/apuestas/:id', eliminarApuesta);
+
 module.exports = router;
+

@@ -1,4 +1,15 @@
-import { fetchDashboardData, crearObligacion, crearTransaccion, actualizarRegistro, eliminarRegistro } from './api.js';
+import { 
+    fetchDashboardData, 
+    crearObligacion, 
+    crearTransaccion, 
+    actualizarRegistro, 
+    eliminarRegistro,
+    fetchInversionesData,
+    actualizarSaldoBetPlay,
+    crearApuesta,
+    actualizarEstadoApuesta,
+    eliminarApuesta
+} from './api.js';
 
 // 0. Variables globales para el control de la SPA (Cuentas, Obligaciones, Historial, Calendario)
 let todasObligaciones = [];
@@ -9,26 +20,47 @@ let calendarioAnioActual = new Date().getFullYear();
 let seccionActiva = 'inicio';
 let fpInstance = null; // Instancia global de Flatpickr
 
+// Variables globales para el Módulo de Inversiones (BetPlay)
+let moduloActivo = 'hub'; // 'hub', 'finanzas', 'inversiones'
+let betplaySaldo = 0;
+let betplayApuestas = [];
+let betplayEstadisticas = {};
+let filtroHistorialBetPlay = 'todos';
+
+
 // 0.1 Control de Sidebar Drawer Responsivo para Dispositivos Móviles
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
+    const sidebarInversiones = document.getElementById('sidebar-inversiones');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+    const btnCloseSidebarInversiones = document.getElementById('btn-close-sidebar-inversiones');
 
     function cerrarSidebarMovil() {
-        if (sidebar && sidebarOverlay) {
+        if (sidebar) {
             sidebar.classList.add('-translate-x-full');
             sidebar.classList.remove('translate-x-0');
+        }
+        if (sidebarInversiones) {
+            sidebarInversiones.classList.add('-translate-x-full');
+            sidebarInversiones.classList.remove('translate-x-0');
+        }
+        if (sidebarOverlay) {
             sidebarOverlay.classList.add('hidden');
         }
     }
 
     function abrirSidebarMovil() {
-        if (sidebar && sidebarOverlay) {
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('hidden');
+        }
+        if (moduloActivo === 'finanzas' && sidebar) {
             sidebar.classList.remove('-translate-x-full');
             sidebar.classList.add('translate-x-0');
-            sidebarOverlay.classList.remove('hidden');
+        } else if (moduloActivo === 'inversiones' && sidebarInversiones) {
+            sidebarInversiones.classList.remove('-translate-x-full');
+            sidebarInversiones.classList.add('translate-x-0');
         }
     }
 
@@ -40,12 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCloseSidebar.addEventListener('click', cerrarSidebarMovil);
     }
 
+    if (btnCloseSidebarInversiones) {
+        btnCloseSidebarInversiones.addEventListener('click', cerrarSidebarMovil);
+    }
+
     if (sidebarOverlay) {
         sidebarOverlay.addEventListener('click', cerrarSidebarMovil);
     }
 
-    // Cerrar sidebar al hacer clic en cualquier opción del menú en móviles
-    document.querySelectorAll('#sidebar nav a').forEach(link => {
+    // Cerrar sidebars al hacer clic en cualquier opción del menú en móviles
+    document.querySelectorAll('#sidebar nav a, #sidebar-inversiones nav a').forEach(link => {
         link.addEventListener('click', cerrarSidebarMovil);
     });
 
@@ -1102,7 +1138,7 @@ if (tablaHistorialBody) {
 function navegarA(seccion) {
     seccionActiva = seccion;
 
-    // 1. Ocultar todas las secciones principales
+    // 1. Ocultar todas las secciones principales (Finanzas e Inversiones)
     const secciones = [
         'dashboard-principal',
         'calendario-seccion',
@@ -1110,14 +1146,17 @@ function navegarA(seccion) {
         'finanzas-seccion',
         'deudas-seccion',
         'suscripciones-seccion',
-        'configuracion-seccion'
+        'configuracion-seccion',
+        'inversiones-betplay-seccion',
+        'inversiones-historial-seccion',
+        'inversiones-estadisticas-seccion'
     ];
     secciones.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 
-    // 2. Restablecer estilos visuales del menú lateral (remover activo, poner inactivo)
+    // 2. Restablecer estilos visuales del menú lateral (Finanzas o Inversiones)
     const menuIds = {
         inicio: 'menu-inicio',
         finanzas: 'menu-finanzas',
@@ -1125,7 +1164,10 @@ function navegarA(seccion) {
         suscripciones: 'menu-suscripciones',
         ingresos: 'menu-ingresos',
         egresos: 'menu-egresos',
-        configuracion: 'menu-configuracion'
+        configuracion: 'menu-configuracion',
+        betplay: 'menu-inversiones-betplay',
+        'inversiones-historial': 'menu-inversiones-historial',
+        'inversiones-estadisticas': 'menu-inversiones-estadisticas'
     };
 
     // Estilos activos e inactivos de Tailwind
@@ -1185,6 +1227,18 @@ function navegarA(seccion) {
         const el = document.getElementById('historial-seccion');
         if (el) el.classList.remove('hidden');
         renderHistorial();
+    } else if (seccion === 'betplay') {
+        const el = document.getElementById('inversiones-betplay-seccion');
+        if (el) el.classList.remove('hidden');
+        cargarInversiones();
+    } else if (seccion === 'inversiones-historial') {
+        const el = document.getElementById('inversiones-historial-seccion');
+        if (el) el.classList.remove('hidden');
+        cargarInversiones();
+    } else if (seccion === 'inversiones-estadisticas') {
+        const el = document.getElementById('inversiones-estadisticas-seccion');
+        if (el) el.classList.remove('hidden');
+        cargarInversiones();
     }
 }
 
@@ -1504,7 +1558,7 @@ function renderHistorialFiltrado(tipo) {
     });
 }
 
-// Vinculación de Eventos del Sidebar
+// Vinculación de Eventos del Sidebar (Módulo Financiero)
 const menuInicio = document.getElementById('menu-inicio');
 const menuFinanzas = document.getElementById('menu-finanzas');
 const menuDeudas = document.getElementById('menu-deudas');
@@ -1521,5 +1575,550 @@ if (menuIngresos) menuIngresos.addEventListener('click', (e) => { e.preventDefau
 if (menuEgresos) menuEgresos.addEventListener('click', (e) => { e.preventDefault(); navegarA('egresos'); });
 if (menuConfiguracion) menuConfiguracion.addEventListener('click', (e) => { e.preventDefault(); navegarA('configuracion'); });
 
-// Ejecutar la carga cuando el DOM esté completamente listo
-document.addEventListener('DOMContentLoaded', cargarDashboard);
+
+// ========================================================
+// RENDERIZADO Y CONTROLADORES: MÓDULO INVERSIONES (BETPLAY)
+// ========================================================
+
+function navegarAModulo(modulo) {
+    moduloActivo = modulo;
+    
+    const sidebarFinanzas = document.getElementById('sidebar');
+    const sidebarInversiones = document.getElementById('sidebar-inversiones');
+    const hubSeccion = document.getElementById('aura-hub-seccion');
+    const mainEl = document.querySelector('main');
+    const headerEl = document.querySelector('header');
+    const headerTitle = document.getElementById('header-title');
+    const fabAddBtn = document.getElementById('fab-add-button');
+    
+    // 1. Ocultar todas las vistas de finanzas e inversiones
+    const seccionesFinanzas = [
+        'dashboard-principal',
+        'calendario-seccion',
+        'historial-seccion',
+        'finanzas-seccion',
+        'deudas-seccion',
+        'suscripciones-seccion',
+        'configuracion-seccion'
+    ];
+    seccionesFinanzas.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+    
+    const seccionesInversiones = [
+        'inversiones-betplay-seccion',
+        'inversiones-historial-seccion',
+        'inversiones-estadisticas-seccion'
+    ];
+    seccionesInversiones.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+
+    if (modulo === 'hub') {
+        // Ocultar sidebars
+        if (sidebarFinanzas) sidebarFinanzas.classList.add('hidden');
+        if (sidebarInversiones) sidebarInversiones.classList.add('hidden');
+        
+        // Mostrar Hub
+        if (hubSeccion) hubSeccion.classList.remove('hidden');
+        
+        // Ajustar main y header para ancho completo sin sidebar
+        if (mainEl) {
+            mainEl.classList.remove('lg:ml-64');
+            mainEl.classList.add('ml-0');
+        }
+        if (headerEl) {
+            headerEl.classList.remove('lg:w-[calc(100%-16rem)]');
+            headerEl.classList.add('w-full');
+        }
+        if (headerTitle) {
+            headerTitle.textContent = "Aura Hub Central";
+        }
+        if (fabAddBtn) {
+            fabAddBtn.classList.add('hidden');
+        }
+        seccionActiva = 'hub';
+    } else if (modulo === 'finanzas') {
+        // Mostrar sidebar finanzas, ocultar inversiones
+        if (sidebarFinanzas) sidebarFinanzas.classList.remove('hidden');
+        if (sidebarInversiones) sidebarInversiones.classList.add('hidden');
+        
+        // Ocultar hub
+        if (hubSeccion) hubSeccion.classList.add('hidden');
+        
+        // Ajustar main y header para dejar espacio al sidebar
+        if (mainEl) {
+            mainEl.classList.add('lg:ml-64');
+            mainEl.classList.remove('ml-0');
+        }
+        if (headerEl) {
+            headerEl.classList.add('lg:w-[calc(100%-16rem)]');
+            headerEl.classList.remove('w-full');
+        }
+        if (headerTitle) {
+            headerTitle.textContent = "¡Bienvenido, Christian!";
+        }
+        if (fabAddBtn) {
+            fabAddBtn.classList.remove('hidden');
+        }
+        
+        // Ir al inicio de finanzas
+        navegarA('inicio');
+    } else if (modulo === 'inversiones') {
+        // Mostrar sidebar inversiones, ocultar finanzas
+        if (sidebarFinanzas) sidebarFinanzas.classList.add('hidden');
+        if (sidebarInversiones) sidebarInversiones.classList.remove('hidden');
+        
+        // Ocultar hub
+        if (hubSeccion) hubSeccion.classList.add('hidden');
+        
+        // Ajustar main y header para dejar espacio al sidebar
+        if (mainEl) {
+            mainEl.classList.add('lg:ml-64');
+            mainEl.classList.remove('ml-0');
+        }
+        if (headerEl) {
+            headerEl.classList.add('lg:w-[calc(100%-16rem)]');
+            headerEl.classList.remove('w-full');
+        }
+        if (headerTitle) {
+            headerTitle.textContent = "Aura Bets (Inversiones)";
+        }
+        if (fabAddBtn) {
+            fabAddBtn.classList.add('hidden');
+        }
+        
+        // Ir al panel de BetPlay de inversiones
+        navegarA('betplay');
+    }
+}
+
+async function cargarInversiones() {
+    const data = await fetchInversionesData();
+    if (!data) return;
+
+    betplaySaldo = data.saldoActual || 0;
+    betplayApuestas = data.apuestas || [];
+    betplayEstadisticas = data.estadisticas || {};
+
+    // Renderizar Saldo en el panel
+    const saldoEl = document.getElementById('betplay-saldo-html');
+    if (saldoEl) {
+        saldoEl.textContent = formatoMoneda(betplaySaldo) + ' COP';
+    }
+
+    // Renderizar resumen rápido en el panel
+    const quickBeneficio = document.getElementById('quick-beneficio-html');
+    if (quickBeneficio) {
+        const beneficio = betplayEstadisticas.beneficio_neto || 0;
+        quickBeneficio.textContent = formatoMoneda(beneficio);
+        if (beneficio > 0) {
+            quickBeneficio.className = "text-2xl font-extrabold text-green-400";
+        } else if (beneficio < 0) {
+            quickBeneficio.className = "text-2xl font-extrabold text-error";
+        } else {
+            quickBeneficio.className = "text-2xl font-extrabold text-on-surface";
+        }
+    }
+    const quickWinRate = document.getElementById('quick-winrate-html');
+    if (quickWinRate) {
+        quickWinRate.textContent = `${betplayEstadisticas.winRate || 0}%`;
+    }
+
+    // Renderizar vistas según la sección activa
+    if (seccionActiva === 'betplay') {
+        renderApuestasActivas();
+    } else if (seccionActiva === 'inversiones-historial') {
+        renderHistorialBetPlay();
+    } else if (seccionActiva === 'inversiones-estadisticas') {
+        renderEstadisticasBetPlay();
+    }
+}
+
+function renderApuestasActivas() {
+    const container = document.getElementById('apuestas-activas-container');
+    const badge = document.getElementById('cnt-activas-badge');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const activas = betplayApuestas.filter(a => a.estado === 'pendiente');
+    
+    if (badge) {
+        badge.textContent = activas.length;
+    }
+
+    if (activas.length === 0) {
+        container.innerHTML = `
+            <div class="py-12 text-center text-on-surface-variant font-medium italic border border-dashed border-outline-variant/20 rounded-2xl">
+                No tienes apuestas activas. ¡Registra una usando el formulario!
+            </div>
+        `;
+        return;
+    }
+
+    activas.forEach(apuesta => {
+        const retornoPosible = apuesta.valor_apostado * apuesta.cuota;
+        container.innerHTML += `
+            <div class="glass-panel p-5 rounded-2xl border border-outline-variant/30 bg-surface-container/20 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-secondary-container/40">
+                <div class="space-y-1.5 flex-1">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-bold text-[9px] uppercase tracking-wider border border-yellow-500/20">Pendiente</span>
+                        <span class="text-on-surface-variant text-[10px] font-mono">${apuesta.fecha}</span>
+                    </div>
+                    <h4 class="font-body-md text-body-md font-bold text-on-surface">${apuesta.evento}</h4>
+                    <p class="text-xs text-on-surface-variant">Pronóstico: <strong class="text-on-surface font-semibold">${apuesta.pronostico}</strong> (Cuota: ${apuesta.cuota.toFixed(2)})</p>
+                </div>
+                <div class="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-outline-variant/10 pt-3 md:pt-0">
+                    <div class="text-left md:text-right">
+                        <p class="text-[10px] text-on-surface-variant font-medium uppercase">Valor Apostado / Retorno</p>
+                        <p class="font-body-md text-body-md font-bold text-on-surface mt-0.5">${formatoMoneda(apuesta.valor_apostado)} <span class="text-[10px] text-secondary-container font-semibold">➜ ${formatoMoneda(retornoPosible)}</span></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-resolver-apuesta w-8 h-8 rounded-lg bg-green-400/20 border border-green-400/30 text-green-400 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow" data-id="${apuesta.id}" data-estado="ganada" title="Marcar como Ganada">
+                            <span class="material-symbols-outlined text-[16px]">check</span>
+                        </button>
+                        <button class="btn-resolver-apuesta w-8 h-8 rounded-lg bg-error/20 border border-error/30 text-error flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow" data-id="${apuesta.id}" data-estado="perdida" title="Marcar como Perdida">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                        <button class="btn-eliminar-apuesta w-8 h-8 rounded-lg bg-outline-variant/20 border border-outline-variant/30 text-on-surface-variant flex items-center justify-center hover:scale-110 active:scale-95 transition-all" data-id="${apuesta.id}" title="Eliminar">
+                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    // Registrar Event Listeners de resolución y eliminación
+    container.querySelectorAll('.btn-resolver-apuesta').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const estado = btn.getAttribute('data-estado');
+            if (confirm(`¿Resolver esta apuesta como ${estado.toUpperCase()}? Esto afectará tu saldo simulado.`)) {
+                try {
+                    const res = await actualizarEstadoApuesta(id, estado);
+                    if (res) {
+                        await cargarInversiones();
+                    }
+                } catch (err) {
+                    alert(err.message || 'Error al resolver la apuesta');
+                }
+            }
+        });
+    });
+
+    container.querySelectorAll('.btn-eliminar-apuesta').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            if (confirm('¿Eliminar esta apuesta permanentemente? Si estaba pendiente, se devolverá tu dinero al saldo.')) {
+                try {
+                    const res = await eliminarApuesta(id);
+                    if (res) {
+                        await cargarInversiones();
+                    }
+                } catch (err) {
+                    alert(err.message || 'Error al eliminar la apuesta');
+                }
+            }
+        });
+    });
+}
+
+function renderHistorialBetPlay() {
+    const tbody = document.getElementById('historial-apuestas-tbody');
+    const emptyState = document.getElementById('historial-vacio-state');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    
+    // Filtrar por filtroHistorialBetPlay ('todos', 'ganada', 'perdida')
+    let filtradas = betplayApuestas.filter(a => a.estado !== 'pendiente');
+    if (filtroHistorialBetPlay !== 'todos') {
+        filtradas = filtradas.filter(a => a.estado === filtroHistorialBetPlay);
+    }
+
+    if (filtradas.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    filtradas.forEach(apuesta => {
+        const esGanada = apuesta.estado === 'ganada';
+        const badgeStyle = esGanada 
+            ? 'bg-green-400/20 text-green-400 border border-green-400/20' 
+            : 'bg-error/20 text-error border border-error/20';
+        
+        const retorno = esGanada ? (apuesta.valor_apostado * apuesta.cuota) : 0;
+        const retornoTexto = esGanada ? formatoMoneda(retorno) : '$0';
+        const retornoColor = esGanada ? 'text-green-400 font-bold' : 'text-on-surface-variant';
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-surface-container-high/40 transition-colors border-b border-outline-variant/10">
+                <td class="py-4 px-6 text-xs text-on-surface-variant font-mono">${apuesta.fecha}</td>
+                <td class="py-4 px-6 font-semibold text-on-surface">${apuesta.evento}</td>
+                <td class="py-4 px-6 text-xs text-on-surface-variant">${apuesta.pronostico}</td>
+                <td class="py-4 px-6 text-center font-mono text-xs font-bold text-secondary-container">${apuesta.cuota.toFixed(2)}</td>
+                <td class="py-4 px-6 text-right font-medium text-on-surface">${formatoMoneda(apuesta.valor_apostado)}</td>
+                <td class="py-4 px-6 text-center">
+                    <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badgeStyle}">
+                        ${apuesta.estado}
+                    </span>
+                </td>
+                <td class="py-4 px-6 text-right font-bold ${retornoColor}">${retornoTexto}</td>
+                <td class="py-4 px-6 text-center">
+                    <button class="btn-eliminar-apuesta-historial text-on-surface-variant hover:text-error transition-colors" data-id="${apuesta.id}">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.querySelectorAll('.btn-eliminar-apuesta-historial').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            if (confirm('¿Eliminar este registro de tu historial de forma permanente? El saldo no se modificará ya que esta apuesta ya fue liquidada.')) {
+                try {
+                    const res = await eliminarApuesta(id);
+                    if (res) {
+                        await cargarInversiones();
+                    }
+                } catch (err) {
+                    alert(err.message || 'Error al eliminar la apuesta');
+                }
+            }
+        });
+    });
+}
+
+function renderEstadisticasBetPlay() {
+    const winRateEl = document.getElementById('stats-winrate-html');
+    const yieldEl = document.getElementById('stats-yield-html');
+    const beneficioEl = document.getElementById('stats-beneficio-html');
+    const invertidoEl = document.getElementById('stats-invertido-html');
+
+    const cntPendientes = document.getElementById('stats-cnt-pendientes');
+    const cntGanadas = document.getElementById('stats-cnt-ganadas');
+    const cntPerdidas = document.getElementById('stats-cnt-perdidas');
+    const cntTotal = document.getElementById('stats-cnt-total');
+
+    if (winRateEl) winRateEl.textContent = `${betplayEstadisticas.winRate || 0}%`;
+    
+    if (yieldEl) {
+        const yieldVal = betplayEstadisticas.yield || 0;
+        yieldEl.textContent = `${yieldVal > 0 ? '+' : ''}${yieldVal}%`;
+        if (yieldVal > 0) {
+            yieldEl.className = "text-4xl font-extrabold text-green-400";
+        } else if (yieldVal < 0) {
+            yieldEl.className = "text-4xl font-extrabold text-error";
+        } else {
+            yieldEl.className = "text-4xl font-extrabold text-on-surface";
+        }
+    }
+
+    if (beneficioEl) {
+        const beneficio = betplayEstadisticas.beneficio_neto || 0;
+        beneficioEl.textContent = formatoMoneda(beneficio);
+        if (beneficio > 0) {
+            beneficioEl.className = "text-4xl font-extrabold text-green-400";
+        } else if (beneficio < 0) {
+            beneficioEl.className = "text-4xl font-extrabold text-error";
+        } else {
+            beneficioEl.className = "text-4xl font-extrabold text-on-surface";
+        }
+    }
+
+    if (invertidoEl) {
+        invertidoEl.textContent = formatoMoneda(betplayEstadisticas.total_invertido || 0);
+    }
+
+    if (cntPendientes) cntPendientes.textContent = betplayEstadisticas.apuestas_pendientes || 0;
+    if (cntGanadas) cntGanadas.textContent = betplayEstadisticas.apuestas_ganadas || 0;
+    if (cntPerdidas) cntPerdidas.textContent = betplayEstadisticas.apuestas_perdidas || 0;
+    if (cntTotal) cntTotal.textContent = betplayEstadisticas.total_apuestas || 0;
+}
+
+
+// Oyentes para el Módulo de Saldo BetPlay
+const formBetPlaySaldo = document.getElementById('form-betplay-saldo');
+const modalBetPlaySaldo = document.getElementById('modal-betplay-saldo');
+
+if (formBetPlaySaldo) {
+    formBetPlaySaldo.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(formBetPlaySaldo);
+        const monto = parseFloat(formData.get('monto'));
+        const tipo = formData.get('tipo_movimiento');
+        
+        if (isNaN(monto) || monto <= 0) return;
+        
+        try {
+            const res = await actualizarSaldoBetPlay(monto, tipo);
+            if (res) {
+                modalBetPlaySaldo.classList.add('hidden');
+                formBetPlaySaldo.reset();
+                await cargarInversiones();
+            }
+        } catch (err) {
+            alert(err.message || 'Error al actualizar saldo');
+        }
+    });
+}
+
+const btnRecargar = document.getElementById('btn-betplay-recargar');
+const btnRetirar = document.getElementById('btn-betplay-retirar');
+const modalBetPlayTitulo = document.getElementById('modal-betplay-titulo');
+const modalBetPlayDesc = document.getElementById('modal-betplay-descripcion');
+const inputSaldoTipo = document.getElementById('betplay-saldo-tipo-movimiento');
+const btnCancelarBetPlaySaldo = document.getElementById('btn-betplay-cancelar-modal');
+
+if (btnRecargar && modalBetPlaySaldo) {
+    btnRecargar.addEventListener('click', () => {
+        modalBetPlayTitulo.textContent = 'Recargar Saldo (Simulado)';
+        modalBetPlayDesc.textContent = 'Ingresa el monto simulado para recargar tu cuenta de BetPlay.';
+        if (inputSaldoTipo) inputSaldoTipo.value = 'deposito';
+        modalBetPlaySaldo.classList.remove('hidden');
+    });
+}
+
+if (btnRetirar && modalBetPlaySaldo) {
+    btnRetirar.addEventListener('click', () => {
+        modalBetPlayTitulo.textContent = 'Retirar Saldo (Simulado)';
+        modalBetPlayDesc.textContent = 'Ingresa el monto simulado para retirar de tu cuenta de BetPlay.';
+        if (inputSaldoTipo) inputSaldoTipo.value = 'retiro';
+        modalBetPlaySaldo.classList.remove('hidden');
+    });
+}
+
+if (btnCancelarBetPlaySaldo && modalBetPlaySaldo) {
+    btnCancelarBetPlaySaldo.addEventListener('click', () => {
+        modalBetPlaySaldo.classList.add('hidden');
+        if (formBetPlaySaldo) formBetPlaySaldo.reset();
+    });
+}
+
+if (modalBetPlaySaldo) {
+    modalBetPlaySaldo.addEventListener('click', (e) => {
+        if (e.target === modalBetPlaySaldo) {
+            modalBetPlaySaldo.classList.add('hidden');
+            if (formBetPlaySaldo) formBetPlaySaldo.reset();
+        }
+    });
+}
+
+// Oyentes para el Formulario de Registrar Apuesta
+const formRegistrarApuesta = document.getElementById('form-registrar-apuesta');
+if (formRegistrarApuesta) {
+    formRegistrarApuesta.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(formRegistrarApuesta);
+        const data = {
+            evento: formData.get('evento'),
+            pronostico: formData.get('pronostico'),
+            cuota: parseFloat(formData.get('cuota')),
+            valor_apostado: parseFloat(formData.get('valor_apostado'))
+        };
+
+        if (!data.evento || !data.pronostico || isNaN(data.cuota) || isNaN(data.valor_apostado)) {
+            alert('Por favor, completa todos los campos correctamente.');
+            return;
+        }
+
+        if (data.valor_apostado > betplaySaldo) {
+            alert('Saldo insuficiente en tu cuenta simulada de BetPlay para realizar esta apuesta.');
+            return;
+        }
+
+        try {
+            const res = await crearApuesta(data);
+            if (res) {
+                formRegistrarApuesta.reset();
+                await cargarInversiones();
+            }
+        } catch (err) {
+            alert(err.message || 'Error al registrar la apuesta');
+        }
+    });
+}
+
+// Vinculación de clics en las tarjetas del Aura Hub Portal
+const btnHubFinanzas = document.getElementById('btn-hub-finanzas');
+const btnHubInversiones = document.getElementById('btn-hub-inversiones');
+
+if (btnHubFinanzas) {
+    btnHubFinanzas.addEventListener('click', () => navegarAModulo('finanzas'));
+}
+
+if (btnHubInversiones) {
+    btnHubInversiones.addEventListener('click', () => navegarAModulo('inversiones'));
+}
+
+// Vinculación de clics en los botones "Volver al Portal"
+const btnSidebarBackHub = document.getElementById('btn-sidebar-back-hub');
+const btnSidebarInversionesBackHub = document.getElementById('btn-sidebar-inversiones-back-hub');
+
+if (btnSidebarBackHub) {
+    btnSidebarBackHub.addEventListener('click', (e) => {
+        e.preventDefault();
+        navegarAModulo('hub');
+    });
+}
+
+if (btnSidebarInversionesBackHub) {
+    btnSidebarInversionesBackHub.addEventListener('click', (e) => {
+        e.preventDefault();
+        navegarAModulo('hub');
+    });
+}
+
+// Vinculación de clics en el Sidebar de Inversiones (Aura Bets)
+const menuInvBetPlay = document.getElementById('menu-inversiones-betplay');
+const menuInvHistorial = document.getElementById('menu-inversiones-historial');
+const menuInvStats = document.getElementById('menu-inversiones-estadisticas');
+
+if (menuInvBetPlay) {
+    menuInvBetPlay.addEventListener('click', (e) => {
+        e.preventDefault();
+        navegarA('betplay');
+    });
+}
+if (menuInvHistorial) {
+    menuInvHistorial.addEventListener('click', (e) => {
+        e.preventDefault();
+        navegarA('inversiones-historial');
+    });
+}
+if (menuInvStats) {
+    menuInvStats.addEventListener('click', (e) => {
+        e.preventDefault();
+        navegarA('inversiones-estadisticas');
+    });
+}
+
+const btnVerStatsInversiones = document.getElementById('btn-betplay-ver-stats');
+if (btnVerStatsInversiones) {
+    btnVerStatsInversiones.addEventListener('click', () => {
+        navegarA('inversiones-estadisticas');
+    });
+}
+
+const filtroHistorialEstado = document.getElementById('filtro-historial-estado');
+if (filtroHistorialEstado) {
+    filtroHistorialEstado.addEventListener('change', (e) => {
+        filtroHistorialBetPlay = e.target.value;
+        renderHistorialBetPlay();
+    });
+}
+
+
+// Ejecutar la carga y pre-cargar en background iniciando en el Hub Central
+document.addEventListener('DOMContentLoaded', () => {
+    navegarAModulo('hub');
+    cargarDashboard();
+    cargarInversiones();
+});
+

@@ -42,8 +42,8 @@
     <!-- Overlay de fondo para Sidebar en dispositivos móviles -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-    <aside id="sidebar" class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50 transition-transform duration-300 -translate-x-full lg:translate-x-0">
-        <div class="mb-8 px-4 py-2 flex items-center justify-between">
+    <aside id="sidebar" class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50 transition-transform duration-300 -translate-x-full lg:translate-x-0 hidden">
+        <div class="mb-6 px-4 py-2 flex items-center justify-between">
             <div>
                 <h1 class="font-headline-md text-headline-md font-bold text-primary">Aura Finance</h1>
                 <p class="text-on-surface-variant font-label-md text-label-md">Gestión Patrimonial</p>
@@ -53,6 +53,15 @@
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
         </div>
+        
+        <!-- Botón Volver al Portal -->
+        <div class="px-2 mb-4">
+            <button id="btn-sidebar-back-hub" class="w-full py-2.5 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[14px]">arrow_back</span>
+                <span>Volver al Portal</span>
+            </button>
+        </div>
+
         <nav class="flex flex-col gap-1">
             <a id="menu-inicio" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold transition-transform scale-98 active:scale-95 cursor-pointer" href="#">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
@@ -87,6 +96,45 @@
         </nav>
     </aside>
 
+    <!-- ========================================== -->
+    <!-- SIDEBAR MÓDULO INVERSIONES [NUEVO] -->
+    <!-- ========================================== -->
+    <aside id="sidebar-inversiones" class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50 transition-transform duration-300 -translate-x-full lg:translate-x-0 hidden">
+        <div class="mb-6 px-4 py-2 flex items-center justify-between">
+            <div>
+                <h1 class="font-headline-md text-headline-md font-bold text-on-secondary-container">Aura Bets</h1>
+                <p class="text-on-surface-variant font-label-md text-label-md">Control de Inversiones</p>
+            </div>
+            <!-- Botón Cerrar Sidebar en Móvil -->
+            <button id="btn-close-sidebar-inversiones" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-all">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+        
+        <!-- Botón Volver al Portal -->
+        <div class="px-2 mb-4">
+            <button id="btn-sidebar-inversiones-back-hub" class="w-full py-2.5 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[14px]">arrow_back</span>
+                <span>Volver al Portal</span>
+            </button>
+        </div>
+
+        <nav class="flex flex-col gap-1">
+            <a id="menu-inversiones-betplay" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold transition-transform scale-98 active:scale-95 cursor-pointer" href="#">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sports_esports</span>
+                <span class="font-label-md text-label-md">BetPlay</span>
+            </a>
+            <a id="menu-inversiones-historial" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span class="font-label-md text-label-md">Historial</span>
+            </a>
+            <a id="menu-inversiones-estadisticas" class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer" href="#">
+                <span class="material-symbols-outlined">analytics</span>
+                <span class="font-label-md text-label-md">Estadísticas</span>
+            </a>
+        </nav>
+    </aside>
+
     <main class="ml-0 lg:ml-64 min-h-screen relative bg-background">
         <header class="fixed top-0 right-0 w-full lg:w-[calc(100%-16rem)] z-40 flex justify-between items-center h-20 px-4 lg:px-[40px] bg-background/70 backdrop-blur-xl border-b border-outline-variant">
             <div class="flex items-center gap-4 lg:gap-6">
@@ -95,7 +143,7 @@
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <div class="flex flex-col">
-                    <h2 class="font-headline-md lg:font-headline-lg text-title-lg lg:text-headline-lg text-on-background font-bold">¡Bienvenido, Christian!</h2>
+                    <h2 id="header-title" class="font-headline-md lg:font-headline-lg text-title-lg lg:text-headline-lg text-on-background font-bold">¡Bienvenido, Christian!</h2>
                     <p id="header-date" class="text-on-surface-variant font-body-sm lg:font-body-md text-body-xs lg:text-body-md">Cargando fecha...</p>
                 </div>
             </div>
@@ -119,7 +167,76 @@
         </header>
  
         <section class="pt-24 lg:pt-28 px-4 lg:px-[40px] pb-12 h-screen overflow-y-auto scroll-hide">
-            <div id="dashboard-principal" class="space-y-10">
+            <!-- ========================================== -->
+            <!-- PANTALLA PORTAL (AURA HUB) [NUEVO] -->
+            <!-- ========================================== -->
+            <div id="aura-hub-seccion" class="space-y-12 max-w-5xl mx-auto py-10 px-4">
+                <div class="text-center space-y-4">
+                    <span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
+                        ✨ Aura Hub Central
+                    </span>
+                    <h1 class="font-headline-lg text-4xl lg:text-5xl font-extrabold text-on-background tracking-tight">
+                        Tus Módulos de <span class="text-primary">Control</span>
+                    </h1>
+                    <p class="text-on-surface-variant max-w-xl mx-auto text-sm lg:text-base">
+                        Bienvenido a tu centro de control personal. Selecciona una herramienta para comenzar a gestionar tus finanzas o inversiones en tiempo real.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Tarjeta Módulo Financiero -->
+                    <div id="btn-hub-finanzas" class="glass-panel p-8 rounded-3xl premium-card-glow border border-outline-variant/40 hover:border-primary/50 transition-all hover:scale-103 cursor-pointer group flex flex-col justify-between min-h-[300px] bg-gradient-to-br from-surface to-background">
+                        <div class="space-y-4">
+                            <div class="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined text-[32px]">account_balance_wallet</span>
+                            </div>
+                            <h3 class="font-headline-md text-2xl font-bold text-on-surface group-hover:text-primary transition-colors">Control Financiero</h3>
+                            <p class="text-on-surface-variant text-xs leading-relaxed">
+                                Gestiona tu patrimonio neto, deudas, suscripciones mensuales, cuentas (Efectivo, Nequi, Bancolombia) y flujos de caja en tiempo real.
+                            </p>
+                        </div>
+                        <button class="w-full mt-6 py-3 rounded-xl bg-primary text-background font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 group-hover:bg-primary-fixed hover:shadow-lg transition-all">
+                            <span>Ingresar al Módulo</span>
+                            <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta Módulo Inversiones (BetPlay) -->
+                    <div id="btn-hub-inversiones" class="glass-panel p-8 rounded-3xl premium-card-glow border border-outline-variant/40 hover:border-secondary-container/50 transition-all hover:scale-103 cursor-pointer group flex flex-col justify-between min-h-[300px] bg-gradient-to-br from-surface to-background">
+                        <div class="space-y-4">
+                            <div class="w-14 h-14 rounded-2xl bg-secondary-container/20 text-on-secondary-container flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined text-[32px]">trending_up</span>
+                            </div>
+                            <h3 class="font-headline-md text-2xl font-bold text-on-surface group-hover:text-on-secondary-container transition-colors">Control de Inversiones</h3>
+                            <p class="text-on-surface-variant text-xs leading-relaxed">
+                                Controla tu saldo simulado de apuestas, registra jugadas deportivas, gestiona tus aciertos (Win Rate, Yield) e ingresa al panel de BetPlay.
+                            </p>
+                        </div>
+                        <button class="w-full mt-6 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:shadow-lg transition-all">
+                            <span>Ingresar al Módulo</span>
+                            <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta Módulo Futuro (Bloqueada) -->
+                    <div class="glass-panel p-8 rounded-3xl border border-outline-variant/20 opacity-50 flex flex-col justify-between min-h-[300px] bg-gradient-to-br from-surface to-background select-none relative overflow-hidden pointer-events-none">
+                        <div class="space-y-4">
+                            <div class="w-14 h-14 rounded-2xl bg-outline-variant/20 text-on-surface-variant flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[32px]">lock</span>
+                            </div>
+                            <h3 class="font-headline-md text-2xl font-bold text-on-surface-variant">Próximamente</h3>
+                            <p class="text-on-surface-variant text-xs leading-relaxed">
+                                Futuros módulos de control como presupuestos inteligentes, metas de ahorro, análisis con Inteligencia Artificial y gráficos avanzados.
+                            </p>
+                        </div>
+                        <div class="w-full mt-6 py-3 rounded-xl border border-dashed border-outline-variant text-on-surface-variant font-bold text-xs uppercase tracking-wider text-center">
+                            Bloqueado
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboard-principal" class="space-y-10 hidden">
                 <div class="grid grid-cols-12 gap-6 mb-10">
                     <div class="col-span-12 lg:col-span-6 glass-panel rounded-3xl p-8 premium-card-glow bg-gradient-to-br from-surface to-background flex flex-col justify-between min-h-[220px]">
                         <div>
@@ -358,6 +475,273 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ========================================== -->
+            <!-- SECCIÓN: INVERSIONES - BETPLAY PANEL [NUEVO] -->
+            <!-- ========================================== -->
+            <div id="inversiones-betplay-seccion" class="hidden space-y-8 pb-10">
+                <!-- Tarjeta de Saldo y Botones de Transacción -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="col-span-1 md:col-span-2 glass-panel rounded-3xl p-8 premium-card-glow bg-gradient-to-br from-surface to-background flex flex-col justify-between min-h-[180px] border border-outline-variant/40">
+                        <div>
+                            <p class="font-label-md text-label-md text-secondary-container font-bold tracking-[0.1em] uppercase mb-2">Saldo BetPlay (Simulado)</p>
+                            <h3 class="font-display-lg text-[2.5rem] lg:text-[3.2rem] font-extrabold text-on-surface leading-tight" id="betplay-saldo-html">$0 COP</h3>
+                        </div>
+                        <div class="flex items-center gap-3 mt-6">
+                            <button id="btn-betplay-recargar" class="px-5 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-md">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                <span>Recargar</span>
+                            </button>
+                            <button id="btn-betplay-retirar" class="px-5 py-3 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+                                <span class="material-symbols-outlined text-[16px]">remove_circle</span>
+                                <span>Retirar</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Tarjeta Resumen Rápido Estadísticas -->
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col justify-between bg-surface-container/20">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-on-surface-variant font-bold text-[11px] uppercase tracking-wider">Beneficio Neto</span>
+                                <span class="material-symbols-outlined text-secondary-container opacity-60">monetization_on</span>
+                            </div>
+                            <h4 id="quick-beneficio-html" class="text-2xl font-extrabold text-on-surface">$0</h4>
+                            <div class="flex justify-between items-center text-xs mt-2 border-t border-outline-variant/20 pt-2">
+                                <span class="text-on-surface-variant font-medium">Tasa de Acierto</span>
+                                <span id="quick-winrate-html" class="font-bold text-secondary-container">0%</span>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button id="btn-betplay-ver-stats" class="w-full py-2.5 rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest font-bold text-xs uppercase tracking-wider transition-all text-center">
+                                Ver Estadísticas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registrar Apuesta y Apuestas Activas -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Formulario de Registro -->
+                    <div class="col-span-1 lg:col-span-5 glass-panel rounded-3xl p-8 border border-outline-variant/30 bg-gradient-to-br from-surface to-background/50 flex flex-col gap-6">
+                        <div>
+                            <h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-1">Registrar Apuesta</h3>
+                            <p class="text-on-surface-variant font-body-sm text-body-sm">Ingresa los detalles de tu nueva jugada de inversión deportiva.</p>
+                        </div>
+                        
+                        <form id="form-registrar-apuesta" class="flex flex-col gap-5">
+                            <div class="flex flex-col gap-1.5">
+                                <label for="apuesta-evento" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Evento / Encuentro</label>
+                                <input type="text" id="apuesta-evento" name="evento" required placeholder="Ej: Real Madrid vs Man City" 
+                                       class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label for="apuesta-pronostico" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Pronóstico / Jugada</label>
+                                <input type="text" id="apuesta-pronostico" name="pronostico" required placeholder="Ej: Gana Real Madrid" 
+                                       class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="apuesta-cuota" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Cuota / Factor</label>
+                                    <input type="number" id="apuesta-cuota" name="cuota" required step="0.01" min="1.01" placeholder="Ej: 1.85" 
+                                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="apuesta-monto" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Valor Apostado</label>
+                                    <input type="number" id="apuesta-monto" name="valor_apostado" required min="1" placeholder="COP" 
+                                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="w-full py-3.5 mt-2 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:scale-103 active:scale-97 transition-transform shadow-lg">
+                                <span class="material-symbols-outlined text-[16px]">publish</span>
+                                <span>Colocar Apuesta</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Apuestas Activas -->
+                    <div class="col-span-1 lg:col-span-7 glass-panel rounded-3xl p-8 border border-outline-variant/30 flex flex-col gap-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-1">Apuestas Activas</h3>
+                                <p class="text-on-surface-variant font-body-sm text-body-sm">Apuestas pendientes de resolución en eventos en vivo o futuros.</p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-500 font-bold text-xs uppercase tracking-wider border border-yellow-500/20" id="cnt-activas-badge">
+                                0
+                            </span>
+                        </div>
+                        
+                        <!-- Lista / Grid Responsivo de Apuestas Activas -->
+                        <div class="overflow-y-auto max-h-[360px] scroll-hide pr-1 space-y-4" id="apuestas-activas-container">
+                            <!-- Inyectado dinámicamente con JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SECCIÓN: INVERSIONES - HISTORIAL [NUEVO] -->
+            <!-- ========================================== -->
+            <div id="inversiones-historial-seccion" class="hidden space-y-6 pb-10">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl gap-4">
+                    <div>
+                        <h3 class="font-headline-md text-headline-md font-bold text-on-secondary-container tracking-wider">Historial de Apuestas</h3>
+                        <p class="text-on-surface-variant font-body-sm text-body-sm">Consulta todos tus registros de inversiones resueltos y liquidados.</p>
+                    </div>
+                    <div class="flex items-center gap-2 self-stretch md:self-auto">
+                        <select id="filtro-historial-estado" class="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider outline-none text-on-surface focus:ring-1 focus:ring-secondary-container transition-all">
+                            <option value="todos">Todos los Resultados</option>
+                            <option value="ganada">Ganadas</option>
+                            <option value="perdida">Perdidas</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="glass-panel rounded-3xl border border-outline-variant/30 overflow-hidden bg-surface-container/10">
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-outline-variant/30 text-on-surface-variant text-[11px] font-bold uppercase tracking-wider bg-surface-container/40">
+                                    <th class="py-4 px-6">Fecha</th>
+                                    <th class="py-4 px-6">Evento</th>
+                                    <th class="py-4 px-6">Pronóstico</th>
+                                    <th class="py-4 px-6 text-center">Cuota</th>
+                                    <th class="py-4 px-6 text-right">Inversión</th>
+                                    <th class="py-4 px-6 text-center">Estado</th>
+                                    <th class="py-4 px-6 text-right">Retorno</th>
+                                    <th class="py-4 px-6 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historial-apuestas-tbody" class="divide-y divide-outline-variant/20">
+                                <!-- Inyectado dinámicamente con JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="historial-vacio-state" class="py-16 text-center space-y-4 hidden">
+                        <span class="material-symbols-outlined text-outline text-[48px]">receipt_long</span>
+                        <p class="text-on-surface-variant font-body-sm text-body-sm">No se encontraron apuestas resueltas con el filtro actual.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SECCIÓN: INVERSIONES - ESTADÍSTICAS [NUEVO] -->
+            <!-- ========================================== -->
+            <div id="inversiones-estadisticas-seccion" class="hidden space-y-8 pb-10">
+                <div class="flex justify-between items-center bg-surface-container/40 backdrop-blur-md border border-outline-variant p-6 rounded-3xl font-bold">
+                    <h3 class="font-headline-md text-headline-md text-on-secondary-container tracking-wider">Métricas de Rendimiento</h3>
+                    <span class="material-symbols-outlined text-on-secondary-container opacity-50 text-[24px]">analytics</span>
+                </div>
+                
+                <!-- Grid de Métricas Principales -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Win Rate Card -->
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col justify-between min-h-[140px] bg-gradient-to-br from-surface to-background">
+                        <div class="flex justify-between items-start">
+                            <span class="text-on-surface-variant font-bold text-[11px] uppercase tracking-wider font-bold">Tasa de Acierto</span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                        </div>
+                        <div class="my-3">
+                            <h3 id="stats-winrate-html" class="text-4xl font-extrabold text-on-surface">0%</h3>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">Porcentaje de apuestas resueltas ganadas</p>
+                    </div>
+
+                    <!-- Yield Card -->
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col justify-between min-h-[140px] bg-gradient-to-br from-surface to-background">
+                        <div class="flex justify-between items-start">
+                            <span class="text-on-surface-variant font-bold text-[11px] uppercase tracking-wider font-bold">Retorno (Yield)</span>
+                            <span class="material-symbols-outlined text-[16px] text-secondary-container">bar_chart</span>
+                        </div>
+                        <div class="my-3">
+                            <h3 id="stats-yield-html" class="text-4xl font-extrabold text-on-surface">0%</h3>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">Rendimiento porcentual sobre el capital arriesgado</p>
+                    </div>
+
+                    <!-- Beneficio Neto Card -->
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col justify-between min-h-[140px] bg-gradient-to-br from-surface to-background">
+                        <div class="flex justify-between items-start">
+                            <span class="text-on-surface-variant font-bold text-[11px] uppercase tracking-wider font-bold">Beneficio Neto</span>
+                            <span class="material-symbols-outlined text-[16px] text-green-400">trending_up</span>
+                        </div>
+                        <div class="my-3">
+                            <h3 id="stats-beneficio-html" class="text-4xl font-extrabold text-on-surface">$0</h3>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">Ganancias totales netas (deduciendo pérdidas)</p>
+                    </div>
+
+                    <!-- Total Invertido Card -->
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col justify-between min-h-[140px] bg-gradient-to-br from-surface to-background">
+                        <div class="flex justify-between items-start">
+                            <span class="text-on-surface-variant font-bold text-[11px] uppercase tracking-wider font-bold font-bold">Volumen Invertido</span>
+                            <span class="material-symbols-outlined text-[16px] text-outline">account_balance_wallet</span>
+                        </div>
+                        <div class="my-3">
+                            <h3 id="stats-invertido-html" class="text-4xl font-extrabold text-on-surface">$0</h3>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant">Suma total de dinero puesto en juego</p>
+                    </div>
+                </div>
+
+                <!-- Desglose de Volúmenes -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Distribución de Estados -->
+                    <div class="glass-panel rounded-3xl p-8 border border-outline-variant/30 space-y-6">
+                        <h4 class="font-headline-sm text-lg font-bold text-on-surface">Distribución de Apuestas</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-2xl bg-surface-container flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span class="text-xs text-on-surface-variant font-semibold">Pendientes</span>
+                                </div>
+                                <span id="stats-cnt-pendientes" class="text-sm font-bold text-on-surface">0</span>
+                            </div>
+                            <div class="p-4 rounded-2xl bg-surface-container flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                                    <span class="text-xs text-on-surface-variant font-semibold">Ganadas</span>
+                                </div>
+                                <span id="stats-cnt-ganadas" class="text-sm font-bold text-on-surface">0</span>
+                            </div>
+                            <div class="p-4 rounded-2xl bg-surface-container flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-error"></span>
+                                    <span class="text-xs text-on-surface-variant font-semibold">Perdidas</span>
+                                </div>
+                                <span id="stats-cnt-perdidas" class="text-sm font-bold text-on-surface">0</span>
+                            </div>
+                            <div class="p-4 rounded-2xl bg-surface-container flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-outline"></span>
+                                    <span class="text-xs text-on-surface-variant font-semibold">Total</span>
+                                </div>
+                                <span id="stats-cnt-total" class="text-sm font-bold text-on-surface">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nota de Métricas Informativa -->
+                    <div class="glass-panel rounded-3xl p-8 border border-outline-variant/30 flex flex-col justify-between bg-gradient-to-br from-surface-container/20 to-background/50">
+                        <div class="space-y-4">
+                            <h4 class="font-headline-sm text-lg font-bold text-secondary-container">Consejo de Inversión</h4>
+                            <p class="text-on-surface-variant text-xs leading-relaxed">
+                                Mantener un <strong class="text-on-surface">Yield positivo</strong> a largo plazo es el indicador más claro de rentabilidad en las apuestas deportivas. Trata de enfocar tus pronósticos en jugadas de valor con cuotas bien calculadas y evita el over-betting para proteger tu banca.
+                            </p>
+                            <p class="text-on-surface-variant text-xs leading-relaxed">
+                                Un <strong class="text-on-surface">Win Rate</strong> ideal se encuentra entre el 55% y el 65% para cuotas decimales promedio de 1.80 a 2.10.
+                            </p>
+                        </div>
+                        <div class="pt-4 border-t border-outline-variant/20 flex items-center gap-2 text-secondary-container text-xs font-bold">
+                            <span class="material-symbols-outlined text-[16px]">info</span>
+                            <span>Estadísticas calculadas automáticamente desde la base de datos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <button id="fab-add-button" class="fixed bottom-8 right-8 w-14 h-14 rounded-2xl bg-primary text-on-primary shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
@@ -484,6 +868,40 @@
             </form>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: DEPÓSITO / RETIRO DE SALDO BETPLAY [NUEVO] -->
+    <!-- ========================================== -->
+    <div id="modal-betplay-saldo" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] hidden">
+        <div class="glass-panel max-w-sm w-full mx-4 rounded-3xl p-6 flex flex-col justify-between shadow-2xl bg-gradient-to-br from-surface to-background border border-outline-variant relative">
+            <div>
+                <h3 id="modal-betplay-titulo" class="font-headline-md text-headline-md font-bold text-secondary-container mb-0.5">Recargar Saldo</h3>
+                <p id="modal-betplay-descripcion" class="text-on-surface-variant font-body-sm text-body-sm">Ingresa el monto simulado para recargar tu cuenta de BetPlay.</p>
+            </div>
+            
+            <form id="form-betplay-saldo" class="mt-6 flex flex-col gap-4">
+                <input type="hidden" id="betplay-saldo-tipo-movimiento" name="tipo_movimiento" value="deposito" />
+                
+                <div class="flex flex-col gap-1.5">
+                    <label for="betplay-saldo-monto" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Monto (COP)</label>
+                    <input type="number" id="betplay-saldo-monto" name="monto" required min="1" placeholder="Ej: $50,000"
+                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface" />
+                </div>
+                
+                <div class="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-outline-variant/30">
+                    <button type="button" id="btn-betplay-cancelar-modal" 
+                            class="px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant font-medium text-xs hover:bg-surface-container-highest transition-all text-center whitespace-nowrap">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btn-betplay-guardar-modal"
+                            class="px-4 py-2 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg text-center whitespace-nowrap">
+                        Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Flatpickr (Premium Date Picker) and Spanish Translation JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

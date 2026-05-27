@@ -422,6 +422,242 @@ const deleteTransaccion = async (req, res) => {
   }
 };
 
+// ==========================================
+// MÓDULO DE INVERSIONES (APUESTAS - BETPLAY)
+// ==========================================
+
+const getInversionesData = async (req, res) => {
+  const usuario_id = 1; // ID temporal de Christian
+  try {
+    const [saldoRes, apuestasRes, estadisticasRes] = await Promise.all([
+      // 1. Obtener saldo actual
+      db.query('SELECT COALESCE(saldo_actual, 0)::float AS saldo_actual FROM betplay_saldo WHERE usuario_id = $1 LIMIT 1', [usuario_id]),
+      // 2. Obtener todas las apuestas ordenadas por fecha de registro descendente
+      db.query("SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC", [usuario_id]),
+      // 3. Obtener estadísticas agregadas
+      db.query(`
+        SELECT 
+          COALESCE(COUNT(*), 0)::int AS total_apuestas,
+          COALESCE(SUM(CASE WHEN estado = 'ganada' THEN 1 ELSE 0 END), 0)::int AS apuestas_ganadas,
+          COALESCE(SUM(CASE WHEN estado = 'perdida' THEN 1 ELSE 0 END), 0)::int AS apuestas_perdidas,
+          COALESCE(SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END), 0)::int AS apuestas_pendientes,
+          COALESCE(SUM(CASE WHEN estado = 'ganada' THEN valor_apostado * (cuota - 1) WHEN estado = 'perdida' THEN -valor_apostado ELSE 0 END), 0)::float AS beneficio_neto,
+          COALESCE(SUM(valor_apostado), 0)::float AS total_invertido
+        FROM betplay_apuestas 
+        WHERE usuario_id = $1
+      `, [usuario_id])
+    ]);
+
+    const saldoActual = saldoRes.rows[0] ? saldoRes.rows[0].saldo_actual : 0.00;
+    const apuestas = apuestasRes.rows;
+    const stats = estadisticasRes.rows[0];
+
+    // Calcular tasa de acierto (Win Rate)
+    const resueltas = stats.apuestas_ganadas + stats.apuestas_perdidas;
+    const winRate = resueltas > 0 ? (stats.apuestas_ganadas / resueltas) * 100 : 0;
+    
+    // Calcular Yield (Retorno sobre inversión)
+    const yieldPercentage = stats.total_invertido > 0 ? (stats.beneficio_neto / stats.total_invertido) * 100 : 0;
+
+    res.json({
+      saldoActual,
+      apuestas,
+      estadisticas: {
+        ...stats,
+        winRate: Math.round(winRate),
+        yield: Math.round(yieldPercentage * 100) / 100
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener datos de inversiones:', error);
+    res.status(500).json({ error: 'Error interno del servidor al procesar inversiones' });
+  }
+};
+
+const actualizarSaldoBetPlay = async (req, res) => {
+  const { monto, tipo_movimiento } = req.body;
+  const usuario_id = 1;
+
+  if (monto === undefined || !tipo_movimiento) {
+    return res.status(400).json({ error: 'Monto y tipo de movimiento son requeridos' });
+  }
+
+  const valor = tipo_movimiento === 'deposito' ? Math.abs(monto) : -Math.abs(monto);
+
+  try {
+    await db.query('BEGIN');
+
+    // 1. Obtener saldo actual
+    const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
+    
+    if (saldoRes.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Registro de saldo no encontrado' });
+    }
+
+    const nuevoSaldo = parseFloat(saldoRes.rows[0].saldo_actual) + valor;
+
+    if (nuevoSaldo < 0) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ error: 'Saldo insuficiente para realizar el retiro' });
+    }
+
+    // 2. Actualizar saldo
+    const updateRes = await db.query(
+      'UPDATE betplay_saldo SET saldo_actual = $1, fecha_actualizacion = NOW() WHERE usuario_id = $2 RETURNING saldo_actual::float',
+      [nuevoSaldo, usuario_id]
+    );
+
+    await db.query('COMMIT');
+    res.json({ saldoActual: updateRes.rows[0].saldo_actual });
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error al actualizar saldo de BetPlay:', error);
+    res.status(500).json({ error: 'Error interno del servidor al actualizar saldo' });
+  }
+};
+
+const crearApuesta = async (req, res) => {
+  const { evento, pronostico, cuota, valor_apostado } = req.body;
+  const usuario_id = 1;
+
+  if (!evento || !pronostico || !cuota || !valor_apostado) {
+    return res.status(400).json({ error: 'Faltan campos requeridos para registrar la apuesta' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    // 1. Verificar si hay saldo suficiente
+    const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
+    if (saldoRes.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Registro de saldo no encontrado' });
+    }
+
+    const saldoActual = parseFloat(saldoRes.rows[0].saldo_actual);
+    if (saldoActual < parseFloat(valor_apostado)) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ error: 'Saldo insuficiente en BetPlay para colocar esta apuesta' });
+    }
+
+    // 2. Descontar valor apostado del saldo de BetPlay
+    const nuevoSaldo = saldoActual - parseFloat(valor_apostado);
+    await db.query('UPDATE betplay_saldo SET saldo_actual = $1, fecha_actualizacion = NOW() WHERE usuario_id = $2', [nuevoSaldo, usuario_id]);
+
+    // 3. Crear la apuesta
+    const insertQuery = `
+      INSERT INTO betplay_apuestas (usuario_id, evento, pronostico, cuota, valor_apostado, estado)
+      VALUES ($1, $2, $3, $4, $5, 'pendiente')
+      RETURNING *, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha
+    `;
+    const result = await db.query(insertQuery, [usuario_id, evento, pronostico, cuota, valor_apostado]);
+
+    await db.query('COMMIT');
+    res.status(201).json({ apuesta: result.rows[0], saldoActual: nuevoSaldo });
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error al registrar apuesta:', error);
+    res.status(500).json({ error: 'Error interno del servidor al crear apuesta' });
+  }
+};
+
+const actualizarEstadoApuesta = async (req, res) => {
+  const { id } = req.params;
+  const { nuevoEstado } = req.body; // 'ganada' o 'perdida'
+  const usuario_id = 1;
+
+  if (nuevoEstado !== 'ganada' && nuevoEstado !== 'perdida') {
+    return res.status(400).json({ error: 'El estado de resolución debe ser ganada o perdida' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    // 1. Obtener la apuesta y verificar su estado actual
+    const apuestaRes = await db.query('SELECT * FROM betplay_apuestas WHERE id = $1 AND usuario_id = $2 FOR UPDATE', [id, usuario_id]);
+    if (apuestaRes.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Apuesta no encontrada' });
+    }
+
+    const apuesta = apuestaRes.rows[0];
+    if (apuesta.estado !== 'pendiente') {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ error: 'Esta apuesta ya ha sido resuelta previamente' });
+    }
+
+    // 2. Si es ganada, acreditar al saldo simulado: valor_apostado * cuota
+    let saldoActualizado = null;
+    if (nuevoEstado === 'ganada') {
+      const gananciaTotal = parseFloat(apuesta.valor_apostado) * parseFloat(apuesta.cuota);
+      const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
+      const nuevoSaldo = parseFloat(saldoRes.rows[0].saldo_actual) + gananciaTotal;
+      
+      const updateSaldoRes = await db.query('UPDATE betplay_saldo SET saldo_actual = $1, fecha_actualizacion = NOW() WHERE usuario_id = $2 RETURNING saldo_actual::float', [nuevoSaldo, usuario_id]);
+      saldoActualizado = updateSaldoRes.rows[0].saldo_actual;
+    } else {
+      // Si es perdida, el saldo ya fue debitado al crear la apuesta, no hacemos nada en saldo
+      const saldoRes = await db.query('SELECT saldo_actual::float FROM betplay_saldo WHERE usuario_id = $1', [usuario_id]);
+      saldoActualizado = saldoRes.rows[0].saldo_actual;
+    }
+
+    // 3. Actualizar estado de la apuesta
+    const updateApuestaRes = await db.query(
+      "UPDATE betplay_apuestas SET estado = $1 WHERE id = $2 AND usuario_id = $3 RETURNING *, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha",
+      [nuevoEstado, id, usuario_id]
+    );
+
+    await db.query('COMMIT');
+    res.json({ apuesta: updateApuestaRes.rows[0], saldoActual: saldoActualizado });
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error al resolver apuesta:', error);
+    res.status(500).json({ error: 'Error interno del servidor al resolver la apuesta' });
+  }
+};
+
+const eliminarApuesta = async (req, res) => {
+  const { id } = req.params;
+  const usuario_id = 1;
+
+  try {
+    await db.query('BEGIN');
+
+    // 1. Obtener la apuesta para saber si estaba resuelta o pendiente
+    const apuestaRes = await db.query('SELECT * FROM betplay_apuestas WHERE id = $1 AND usuario_id = $2 FOR UPDATE', [id, usuario_id]);
+    if (apuestaRes.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Apuesta no encontrada' });
+    }
+
+    const apuesta = apuestaRes.rows[0];
+
+    // 2. Si la apuesta estaba PENDIENTE, devolvemos el dinero al saldo (ya que se elimina)
+    let saldoActualizado = null;
+    if (apuesta.estado === 'pendiente') {
+      const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
+      const nuevoSaldo = parseFloat(saldoRes.rows[0].saldo_actual) + parseFloat(apuesta.valor_apostado);
+      
+      const updateSaldoRes = await db.query('UPDATE betplay_saldo SET saldo_actual = $1, fecha_actualizacion = NOW() WHERE usuario_id = $2 RETURNING saldo_actual::float', [nuevoSaldo, usuario_id]);
+      saldoActualizado = updateSaldoRes.rows[0].saldo_actual;
+    } else {
+      const saldoRes = await db.query('SELECT saldo_actual::float FROM betplay_saldo WHERE usuario_id = $1', [usuario_id]);
+      saldoActualizado = saldoRes.rows[0].saldo_actual;
+    }
+
+    // 3. Eliminar la apuesta
+    await db.query('DELETE FROM betplay_apuestas WHERE id = $1 AND usuario_id = $2', [id, usuario_id]);
+
+    await db.query('COMMIT');
+    res.json({ message: 'Apuesta eliminada con éxito', id, saldoActual: saldoActualizado });
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error al eliminar apuesta:', error);
+    res.status(500).json({ error: 'Error interno del servidor al eliminar la apuesta' });
+  }
+};
+
 module.exports = {
   getDashboardData,
   createObligacion,
@@ -430,4 +666,9 @@ module.exports = {
   deleteObligacion,
   updateTransaccion,
   deleteTransaccion,
+  getInversionesData,
+  actualizarSaldoBetPlay,
+  crearApuesta,
+  actualizarEstadoApuesta,
+  eliminarApuesta
 };
