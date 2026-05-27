@@ -35,10 +35,19 @@
 </head>
 <body class="dark overflow-hidden">
 
-    <aside class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50">
-        <div class="mb-8 px-4 py-2">
-            <h1 class="font-headline-md text-headline-md font-bold text-primary">Aura Finance</h1>
-            <p class="text-on-surface-variant font-label-md text-label-md">Gestión Patrimonial</p>
+    <!-- Overlay de fondo para Sidebar en dispositivos móviles -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+    <aside id="sidebar" class="h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 gap-2 z-50 transition-transform duration-300 -translate-x-full lg:translate-x-0">
+        <div class="mb-8 px-4 py-2 flex items-center justify-between">
+            <div>
+                <h1 class="font-headline-md text-headline-md font-bold text-primary">Aura Finance</h1>
+                <p class="text-on-surface-variant font-label-md text-label-md">Gestión Patrimonial</p>
+            </div>
+            <!-- Botón Cerrar Sidebar en Móvil -->
+            <button id="btn-close-sidebar" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-all">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
         </div>
         <nav class="flex flex-col gap-1">
             <a id="menu-inicio" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold transition-transform scale-98 active:scale-95 cursor-pointer" href="#">
@@ -74,20 +83,24 @@
         </nav>
     </aside>
 
-    <main class="ml-64 min-h-screen relative bg-background">
-        <header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 flex justify-between items-center h-20 px-[40px] bg-background/70 backdrop-blur-xl border-b border-outline-variant">
-            <div class="flex items-center gap-6">
+    <main class="ml-0 lg:ml-64 min-h-screen relative bg-background">
+        <header class="fixed top-0 right-0 w-full lg:w-[calc(100%-16rem)] z-40 flex justify-between items-center h-20 px-4 lg:px-[40px] bg-background/70 backdrop-blur-xl border-b border-outline-variant">
+            <div class="flex items-center gap-4 lg:gap-6">
+                <!-- Botón Toggle Sidebar en Móvil -->
+                <button id="btn-toggle-sidebar" class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container border border-outline-variant text-on-surface hover:bg-surface-container-high transition-all">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
                 <div class="flex flex-col">
-                    <h2 class="font-headline-lg text-headline-lg text-on-background">¡Bienvenido, Christian!</h2>
-                    <p class="text-on-surface-variant font-body-md text-body-md">Cargando fecha...</p>
+                    <h2 class="font-headline-md lg:font-headline-lg text-title-lg lg:text-headline-lg text-on-background font-bold">¡Bienvenido, Christian!</h2>
+                    <p class="text-on-surface-variant font-body-sm lg:font-body-md text-body-xs lg:text-body-md">Cargando fecha...</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="relative group">
+            <div class="flex items-center gap-2 lg:gap-4">
+                <div class="relative group hidden md:block">
                     <span class="absolute inset-y-0 left-3 flex items-center text-outline">
                         <span class="material-symbols-outlined text-[20px]">search</span>
                     </span>
-                    <input class="bg-surface-container border-none rounded-full pl-10 pr-4 py-2 w-64 text-sm focus:ring-1 focus:ring-primary transition-all" placeholder="Buscar análisis..." type="text"/>
+                    <input class="bg-surface-container border-none rounded-full pl-10 pr-4 py-2 w-48 lg:w-64 text-sm focus:ring-1 focus:ring-primary transition-all" placeholder="Buscar análisis..." type="text"/>
                 </div>
                 <button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
                     <span class="material-symbols-outlined">notifications</span>
@@ -101,7 +114,7 @@
             </div>
         </header>
  
-        <section class="pt-28 px-[40px] pb-12 h-screen overflow-y-auto scroll-hide">
+        <section class="pt-24 lg:pt-28 px-4 lg:px-[40px] pb-12 h-screen overflow-y-auto scroll-hide">
             <div id="dashboard-principal" class="space-y-10">
                 <div class="grid grid-cols-12 gap-6 mb-10">
                     <div class="col-span-12 lg:col-span-6 glass-panel rounded-3xl p-8 premium-card-glow bg-gradient-to-br from-surface to-background flex flex-col justify-between min-h-[220px]">

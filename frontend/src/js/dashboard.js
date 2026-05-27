@@ -8,6 +8,47 @@ let calendarioMesActual = new Date().getMonth();
 let calendarioAnioActual = new Date().getFullYear();
 let seccionActiva = 'inicio';
 
+// 0.1 Control de Sidebar Drawer Responsivo para Dispositivos Móviles
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
+    function cerrarSidebarMovil() {
+        if (sidebar && sidebarOverlay) {
+            sidebar.classList.add('-translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            sidebarOverlay.classList.add('hidden');
+        }
+    }
+
+    function abrirSidebarMovil() {
+        if (sidebar && sidebarOverlay) {
+            sidebar.classList.remove('-translate-x-full');
+            sidebar.classList.add('translate-x-0');
+            sidebarOverlay.classList.remove('hidden');
+        }
+    }
+
+    if (btnToggleSidebar) {
+        btnToggleSidebar.addEventListener('click', abrirSidebarMovil);
+    }
+
+    if (btnCloseSidebar) {
+        btnCloseSidebar.addEventListener('click', cerrarSidebarMovil);
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', cerrarSidebarMovil);
+    }
+
+    // Cerrar sidebar al hacer clic en cualquier opción del menú en móviles
+    document.querySelectorAll('#sidebar nav a').forEach(link => {
+        link.addEventListener('click', cerrarSidebarMovil);
+    });
+});
+
 // 1. Efecto visual interactivo en los paneles glassmorphism (Brillo dinámico)
 document.querySelectorAll('.glass-panel').forEach(card => {
     card.addEventListener('mousemove', (e) => {
