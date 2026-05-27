@@ -1,7 +1,7 @@
 // Configuración dinámica de la URL de la API según el entorno
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000/api'
-    : 'https://TU-BACKEND-PRODUCCION.onrender.com/api'; // Reemplazar con tu URL de backend en la nube (Render, Railway, etc.)
+    : 'https://control-yonf.onrender.com/api'; // Conectado a tu servidor real de Render
 
 export async function fetchDashboardData() {
     try {
