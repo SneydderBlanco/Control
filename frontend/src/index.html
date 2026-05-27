@@ -31,6 +31,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700;800&family=JetBrains+Mono:wght=500&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
+    <!-- Flatpickr Stylesheets (Premium Dark Theme) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="dark overflow-hidden">
@@ -92,7 +96,7 @@
                 </button>
                 <div class="flex flex-col">
                     <h2 class="font-headline-md lg:font-headline-lg text-title-lg lg:text-headline-lg text-on-background font-bold">¡Bienvenido, Christian!</h2>
-                    <p class="text-on-surface-variant font-body-sm lg:font-body-md text-body-xs lg:text-body-md">Cargando fecha...</p>
+                    <p id="header-date" class="text-on-surface-variant font-body-sm lg:font-body-md text-body-xs lg:text-body-md">Cargando fecha...</p>
                 </div>
             </div>
             <div class="flex items-center gap-2 lg:gap-4">
@@ -480,6 +484,10 @@
             </form>
         </div>
     </div>
+
+    <!-- Flatpickr (Premium Date Picker) and Spanish Translation JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
     <script type="module" src="js/dashboard.js"></script>
 </body>

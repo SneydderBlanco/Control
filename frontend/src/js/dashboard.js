@@ -7,6 +7,7 @@ let todasCuentas = [];
 let calendarioMesActual = new Date().getMonth();
 let calendarioAnioActual = new Date().getFullYear();
 let seccionActiva = 'inicio';
+let fpInstance = null; // Instancia global de Flatpickr
 
 // 0.1 Control de Sidebar Drawer Responsivo para Dispositivos Móviles
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,6 +48,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#sidebar nav a').forEach(link => {
         link.addEventListener('click', cerrarSidebarMovil);
     });
+
+    // 0.2 Inicializar Flatpickr en Español con Tema Oscuro Premium
+    const dateInput = document.getElementById('fecha_vencimiento');
+    if (dateInput) {
+        fpInstance = flatpickr(dateInput, {
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd \\de F, Y',
+            disableMobile: true,
+            theme: 'dark'
+        });
+    }
 });
 
 // 1. Efecto visual interactivo en los paneles glassmorphism (Brillo dinámico)
@@ -61,7 +75,7 @@ document.querySelectorAll('.glass-panel').forEach(card => {
 });
 
 // 2. Manejo dinámico de la fecha actual en el Header
-const dateElement = document.querySelector('p.text-on-surface-variant.font-body-md');
+const dateElement = document.getElementById('header-date');
 if (dateElement) {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const today = new Date();
@@ -561,7 +575,13 @@ function abrirModoEdicion(itemType, id, data) {
                 if (selectDiaSuscripcion && !isNaN(dia)) selectDiaSuscripcion.value = dia;
             }
         } else {
-            if (inputFecha) inputFecha.value = ''; // Se limpia para que elija fecha
+            const obligacion = todasObligaciones.find(o => String(o.id) === String(id));
+            const fechaVenc = obligacion ? obligacion.fecha_vencimiento : '';
+            if (fpInstance) {
+                fpInstance.setDate(fechaVenc);
+            } else if (inputFecha) {
+                inputFecha.value = fechaVenc;
+            }
         }
     } else {
         // transacciones
@@ -595,6 +615,11 @@ if (btnAbrir && modal) {
         }
         document.getElementById('modal-titulo').textContent = 'Registrar';
         activarTab('obligacion');
+        if (fpInstance) {
+            fpInstance.clear();
+        } else if (inputFecha) {
+            inputFecha.value = '';
+        }
         modal.classList.remove('hidden');
     });
 }
