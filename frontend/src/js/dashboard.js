@@ -570,6 +570,8 @@ function abrirModoEdicion(itemType, id, data) {
     document.getElementById('modal-item-type').value = itemType;
     
     const esSuscripcion = itemType === 'obligaciones' && data.tipo === 'suscripcion';
+    const esDeuda = itemType === 'obligaciones' && data.tipo === 'deuda';
+    const btnAbonarDeuda = document.getElementById('btn-abonar-deuda');
     
     if (btnEliminar) {
         btnEliminar.classList.remove('hidden'); // Mostrar botón eliminar
@@ -584,9 +586,17 @@ function abrirModoEdicion(itemType, id, data) {
         }
     }
 
+    if (btnAbonarDeuda) {
+        if (esDeuda && data.estado !== 'pagado') {
+            btnAbonarDeuda.classList.remove('hidden');
+        } else {
+            btnAbonarDeuda.classList.add('hidden');
+        }
+    }
+
     if (btnCancelar) {
-        if (esSuscripcion) {
-            btnCancelar.classList.add('hidden'); // Ocultar Cancelar clásico si es suscripción para liberar espacio
+        if (esSuscripcion || esDeuda) {
+            btnCancelar.classList.add('hidden'); // Ocultar Cancelar clásico si es suscripción o deuda para liberar espacio
         } else {
             btnCancelar.classList.remove('hidden');
         }
@@ -645,6 +655,10 @@ if (btnAbrir && modal) {
         }
         if (btnPagarSuscripcion) {
             btnPagarSuscripcion.classList.add('hidden');
+        }
+        const btnAbonarDeuda = document.getElementById('btn-abonar-deuda');
+        if (btnAbonarDeuda) {
+            btnAbonarDeuda.classList.add('hidden');
         }
         if (btnCancelar) {
             btnCancelar.classList.remove('hidden');
@@ -731,6 +745,89 @@ if (btnPagarSuscripcion) {
                 await cargarDashboard();
             } else {
                 alert('Hubo un error al registrar el pago mensual de la suscripción.');
+            }
+        }
+    });
+}
+
+// LÓGICA DE ACCIÓN: REGISTRAR ABONO / PAGO A DEUDA
+const btnAbonarDeuda = document.getElementById('btn-abonar-deuda');
+if (btnAbonarDeuda) {
+    btnAbonarDeuda.addEventListener('click', async () => {
+        const id = document.getElementById('modal-item-id').value;
+        const obligacion = todasObligaciones.find(o => String(o.id) === String(id));
+        if (!obligacion) return;
+
+        const entidad = obligacion.entidad;
+        const montoRestante = parseFloat(obligacion.monto_restante);
+
+        // 1. Preguntar monto del abono
+        const inputMontoStr = prompt(
+            `Registrar Pago / Abono para "${entidad}"\n` +
+            `Monto restante actual: ${formatoMoneda(montoRestante)}\n\n` +
+            `¿Cuánto deseas pagar? (Ingresa solo números):`, 
+            montoRestante
+        );
+
+        if (inputMontoStr === null) return; // Cancelado o Esc
+        const montoAbono = parseFloat(inputMontoStr.replace(/[^0-9.]/g, ''));
+        if (isNaN(montoAbono) || montoAbono <= 0) {
+            alert('Por favor ingresa un monto válido mayor a 0.');
+            return;
+        }
+
+        if (montoAbono > montoRestante) {
+            alert(`El monto del abono no puede superar el saldo restante de la deuda (${formatoMoneda(montoRestante)}).`);
+            return;
+        }
+
+        // 2. Preguntar la cuenta de origen
+        // Filtrar solo cuentas reales (excluyendo BetPlay)
+        const cuentasReales = todasCuentas.filter(c => c.id !== 'betplay' && !c.nombre.toLowerCase().includes('betplay'));
+        let menuCuentas = 'Selecciona la cuenta para realizar el pago:\n\n';
+        cuentasReales.forEach((c, index) => {
+            menuCuentas += `${index + 1}. ${c.nombre} (Saldo: ${formatoMoneda(c.balance_actual)})\n`;
+        });
+        
+        const seleccionCuentaStr = prompt(menuCuentas + '\nIngresa el número de tu opción (1, 2, 3...):');
+        if (seleccionCuentaStr === null) return; // Cancelado
+        
+        const opcionIndex = parseInt(seleccionCuentaStr) - 1;
+        if (isNaN(opcionIndex) || opcionIndex < 0 || opcionIndex >= cuentasReales.length) {
+            alert('Opción de cuenta inválida.');
+            return;
+        }
+        
+        const cuentaElegida = cuentasReales[opcionIndex];
+        
+        // Verificar saldo de la cuenta
+        if (cuentaElegida.balance_actual < montoAbono) {
+            alert(`Saldo insuficiente en ${cuentaElegida.nombre} (Disponible: ${formatoMoneda(cuentaElegida.balance_actual)}) para realizar este pago.`);
+            return;
+        }
+
+        // 3. Confirmar transacción
+        if (confirm(`¿Confirmas el pago de ${formatoMoneda(montoAbono)} a la deudas "${entidad}" usando tu cuenta de ${cuentaElegida.nombre}?`)) {
+            const data = {
+                descripcion: `Abono Deuda - ${entidad}`,
+                monto: montoAbono,
+                tipo_movimiento: 'egreso',
+                cuenta_id: cuentaElegida.id,
+                categoria: 'Facturas',
+                obligacion_id: obligacion.id
+            };
+
+            try {
+                const response = await crearTransaccion(data);
+                if (response) {
+                    cerrarModal();
+                    await cargarDashboard();
+                    alert('¡Pago registrado con éxito y saldo de la deuda actualizado!');
+                } else {
+                    alert('Hubo un error al registrar el pago de la deuda.');
+                }
+            } catch (err) {
+                alert(err.message || 'Error al procesar el pago.');
             }
         }
     });

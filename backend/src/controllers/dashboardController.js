@@ -307,6 +307,19 @@ const createTransaccion = async (req, res) => {
       usuario_id
     ]);
 
+    // 3. Si la transacción está ligada a una obligación del tipo 'deuda', actualizar el saldo restante de la deuda
+    if (obligacion_id) {
+      const oblQuery = await db.query('SELECT tipo, monto_restante FROM obligaciones WHERE id = $1 AND usuario_id = $2', [obligacion_id, usuario_id]);
+      if (oblQuery.rows.length > 0 && oblQuery.rows[0].tipo === 'deuda') {
+        const nuevoRestante = Math.max(0, oblQuery.rows[0].monto_restante - Math.abs(monto));
+        const nuevoEstado = nuevoRestante === 0 ? 'pagado' : 'activo';
+        await db.query(
+          'UPDATE obligaciones SET monto_restante = $1, estado = $2 WHERE id = $3 AND usuario_id = $4',
+          [nuevoRestante, nuevoEstado, obligacion_id, usuario_id]
+        );
+      }
+    }
+
     // Confirmar transacción SQL
     await db.query('COMMIT');
 
