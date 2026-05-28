@@ -887,6 +887,14 @@
                     <input type="number" id="betplay-saldo-monto" name="monto" required min="1" placeholder="Ej: $50,000"
                            class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface" />
                 </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label id="label-betplay-saldo-cuenta" for="betplay-saldo-cuenta-id" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Cuenta de Origen</label>
+                    <select id="betplay-saldo-cuenta-id" name="cuenta_id" required
+                            class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full transition-all outline-none text-on-surface">
+                        <!-- Cargadas dinámicamente en dashboard.js -->
+                    </select>
+                </div>
                 
                 <div class="flex items-center justify-end gap-2 mt-6 pt-3 border-t border-outline-variant/30">
                     <button type="button" id="btn-betplay-cancelar-modal" 

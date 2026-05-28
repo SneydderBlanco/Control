@@ -105,14 +105,14 @@ export async function fetchInversionesData() {
     }
 }
 
-export async function actualizarSaldoBetPlay(monto, tipoMovimiento) {
+export async function actualizarSaldoBetPlay(monto, tipoMovimiento, cuentaId) {
     try {
         const response = await fetch(`${API_URL}/inversiones/saldo`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ monto, tipo_movimiento: tipoMovimiento })
+            body: JSON.stringify({ monto, tipo_movimiento: tipoMovimiento, cuenta_id: cuentaId })
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));

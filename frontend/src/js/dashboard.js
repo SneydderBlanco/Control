@@ -1264,6 +1264,10 @@ function renderFinanzas() {
             colorBg = 'bg-gradient-to-br from-amber-950/30 via-surface-container/60 to-amber-900/10 border-amber-500/20 hover:border-amber-500/40';
             colorTexto = 'text-amber-400';
             icono = 'account_balance';
+        } else if (cuenta.id === 'betplay' || cuenta.nombre.toLowerCase().includes('betplay')) {
+            colorBg = 'bg-gradient-to-br from-blue-950/35 via-surface-container/60 to-blue-900/10 border-blue-500/30 hover:border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.1)]';
+            colorTexto = 'text-blue-400';
+            icono = 'trending_up';
         }
 
         // Filtrar transacciones recientes de la cuenta
@@ -1947,21 +1951,49 @@ function renderEstadisticasBetPlay() {
 const formBetPlaySaldo = document.getElementById('form-betplay-saldo');
 const modalBetPlaySaldo = document.getElementById('modal-betplay-saldo');
 
+function popularCuentasRealesEnModal(tipo) {
+    const labelCuenta = document.getElementById('label-betplay-saldo-cuenta');
+    if (labelCuenta) {
+        labelCuenta.textContent = tipo === 'deposito' ? 'Cuenta de Origen' : 'Cuenta de Destino';
+    }
+    const selectCuenta = document.getElementById('betplay-saldo-cuenta-id');
+    if (selectCuenta) {
+        selectCuenta.innerHTML = '';
+        // Filtrar solo cuentas REALES (excluyendo la cuenta virtual de BetPlay)
+        const cuentasReales = todasCuentas.filter(c => c.id !== 'betplay' && !c.nombre.toLowerCase().includes('betplay'));
+        if (cuentasReales.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No hay cuentas disponibles';
+            selectCuenta.appendChild(option);
+        } else {
+            cuentasReales.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = `${c.nombre} (${formatoMoneda(c.balance_actual)})`;
+                selectCuenta.appendChild(option);
+            });
+        }
+    }
+}
+
 if (formBetPlaySaldo) {
     formBetPlaySaldo.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(formBetPlaySaldo);
         const monto = parseFloat(formData.get('monto'));
         const tipo = formData.get('tipo_movimiento');
+        const cuentaId = formData.get('cuenta_id');
         
         if (isNaN(monto) || monto <= 0) return;
         
         try {
-            const res = await actualizarSaldoBetPlay(monto, tipo);
+            const res = await actualizarSaldoBetPlay(monto, tipo, cuentaId);
             if (res) {
                 modalBetPlaySaldo.classList.add('hidden');
                 formBetPlaySaldo.reset();
                 await cargarInversiones();
+                await cargarDashboard();
             }
         } catch (err) {
             alert(err.message || 'Error al actualizar saldo');
@@ -1981,6 +2013,7 @@ if (btnRecargar && modalBetPlaySaldo) {
         modalBetPlayTitulo.textContent = 'Recargar Saldo (Simulado)';
         modalBetPlayDesc.textContent = 'Ingresa el monto simulado para recargar tu cuenta de BetPlay.';
         if (inputSaldoTipo) inputSaldoTipo.value = 'deposito';
+        popularCuentasRealesEnModal('deposito');
         modalBetPlaySaldo.classList.remove('hidden');
     });
 }
@@ -1990,6 +2023,7 @@ if (btnRetirar && modalBetPlaySaldo) {
         modalBetPlayTitulo.textContent = 'Retirar Saldo (Simulado)';
         modalBetPlayDesc.textContent = 'Ingresa el monto simulado para retirar de tu cuenta de BetPlay.';
         if (inputSaldoTipo) inputSaldoTipo.value = 'retiro';
+        popularCuentasRealesEnModal('retiro');
         modalBetPlaySaldo.classList.remove('hidden');
     });
 }

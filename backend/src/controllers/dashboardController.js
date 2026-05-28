@@ -14,7 +14,10 @@ const getDashboardData = async (req, res) => {
       pagosMesRes, // 6. Suma de pagos del mes en curso
       obligacionesRes, // 7. Todas las obligaciones del usuario sin límite
       transaccionesHistorialRes, // 8. Historial completo de transacciones
-      cuentasRes // 9. Cuentas desglosadas con saldos
+      cuentasRes, // 9. Cuentas desglosadas con saldos
+      betplaySaldoRes, // 10. Saldo actual de BetPlay
+      betplayPendientesRes, // 11. Suma de apuestas en juego (pendientes)
+      betplayRecientesRes // 12. Últimas 3 apuestas para movimientos
     ] = await Promise.all([
       // 1. Suma de balances en 'cuentas' (columna: balance_actual)
       db.query(
@@ -127,10 +130,29 @@ const getDashboardData = async (req, res) => {
       db.query(
         'SELECT id, nombre_cuenta AS nombre, balance_actual::float FROM cuentas WHERE usuario_id = $1 ORDER BY id',
         [usuario_id]
+      ),
+      // 10. Saldo actual de BetPlay
+      db.query(
+        'SELECT COALESCE(saldo_actual, 0)::float AS saldo_actual FROM betplay_saldo WHERE usuario_id = $1 LIMIT 1',
+        [usuario_id]
+      ),
+      // 11. Suma de apuestas en juego (pendientes)
+      db.query(
+        "SELECT COALESCE(SUM(valor_apostado), 0)::float AS total_jugando FROM betplay_apuestas WHERE usuario_id = $1 AND estado = 'pendiente'",
+        [usuario_id]
+      ),
+      // 12. Últimas 3 apuestas para movimientos
+      db.query(
+        "SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, TO_CHAR(fecha_registro, 'DD Mon, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC LIMIT 3",
+        [usuario_id]
       )
     ]);
 
-    const balanceTotal = balanceRes.rows[0].balance_total;
+    const saldoBetplay = betplaySaldoRes.rows[0] ? betplaySaldoRes.rows[0].saldo_actual : 0.00;
+    const totalJugando = betplayPendientesRes.rows[0] ? betplayPendientesRes.rows[0].total_jugando : 0.00;
+    const totalInversionBetplay = saldoBetplay + totalJugando;
+
+    const balanceTotal = balanceRes.rows[0].balance_total + totalInversionBetplay;
     const deudasTotales = deudasRes.rows[0].deudas_totales;
     const proximosPagos = proximosPagosRes.rows;
     const deudasTabla = deudasTablaRes.rows;
@@ -140,6 +162,44 @@ const getDashboardData = async (req, res) => {
     const obligaciones = obligacionesRes.rows;
     const transaccionesHistorial = transaccionesHistorialRes.rows;
     const cuentas = cuentasRes.rows;
+
+    // Añadir la cuenta virtual de BetPlay al desglose
+    cuentas.push({
+      id: 'betplay',
+      nombre: 'Inversiones (BetPlay)',
+      balance_actual: totalInversionBetplay
+    });
+
+    // Añadir las apuestas recientes formateadas al historial para que se vean en la cuenta virtual
+    const betplayRecientes = betplayRecientesRes.rows;
+    betplayRecientes.forEach(b => {
+      let desc = '';
+      let monto = b.valor_apostado;
+      let tipo_movimiento = 'egreso';
+      
+      if (b.estado === 'pendiente') {
+        desc = `Jugando: ${b.evento} (${b.pronostico})`;
+        monto = b.valor_apostado;
+        tipo_movimiento = 'egreso';
+      } else if (b.estado === 'ganada') {
+        desc = `Ganada: ${b.evento} (${b.pronostico})`;
+        monto = b.valor_apostado * b.cuota;
+        tipo_movimiento = 'ingreso';
+      } else if (b.estado === 'perdida') {
+        desc = `Perdida: ${b.evento} (${b.pronostico})`;
+        monto = b.valor_apostado;
+        tipo_movimiento = 'egreso';
+      }
+      
+      transaccionesHistorial.push({
+        id: `bp-${b.id}`,
+        descripcion: desc,
+        monto: monto,
+        tipo_movimiento: tipo_movimiento,
+        cuenta_id: 'betplay',
+        fecha: b.fecha
+      });
+    });
 
     res.json({
       balanceTotal,
@@ -475,11 +535,11 @@ const getInversionesData = async (req, res) => {
 };
 
 const actualizarSaldoBetPlay = async (req, res) => {
-  const { monto, tipo_movimiento } = req.body;
+  const { monto, tipo_movimiento, cuenta_id } = req.body;
   const usuario_id = 1;
 
-  if (monto === undefined || !tipo_movimiento) {
-    return res.status(400).json({ error: 'Monto y tipo de movimiento son requeridos' });
+  if (monto === undefined || !tipo_movimiento || !cuenta_id) {
+    return res.status(400).json({ error: 'Monto, tipo de movimiento y cuenta_id son requeridos' });
   }
 
   const valor = tipo_movimiento === 'deposito' ? Math.abs(monto) : -Math.abs(monto);
@@ -487,22 +547,61 @@ const actualizarSaldoBetPlay = async (req, res) => {
   try {
     await db.query('BEGIN');
 
-    // 1. Obtener saldo actual
+    // 1. Obtener saldo actual de BetPlay
     const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
     
     if (saldoRes.rows.length === 0) {
       await db.query('ROLLBACK');
-      return res.status(404).json({ error: 'Registro de saldo no encontrado' });
+      return res.status(404).json({ error: 'Registro de saldo de BetPlay no encontrado' });
     }
 
     const nuevoSaldo = parseFloat(saldoRes.rows[0].saldo_actual) + valor;
 
     if (nuevoSaldo < 0) {
       await db.query('ROLLBACK');
-      return res.status(400).json({ error: 'Saldo insuficiente para realizar el retiro' });
+      return res.status(400).json({ error: 'Saldo insuficiente en BetPlay para realizar el retiro' });
     }
 
-    // 2. Actualizar saldo
+    // 2. Manejo de cuenta de origen/destino financiera real
+    const cuentaRes = await db.query('SELECT nombre_cuenta, balance_actual::float FROM cuentas WHERE id = $1 AND usuario_id = $2 FOR UPDATE', [cuenta_id, usuario_id]);
+    if (cuentaRes.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cuenta financiera seleccionada no encontrada' });
+    }
+
+    const nombreCuenta = cuentaRes.rows[0].nombre_cuenta;
+    const balanceCuentaActual = cuentaRes.rows[0].balance_actual;
+
+    if (tipo_movimiento === 'deposito') {
+      // Depósito en BetPlay = Dinero sale de la cuenta real (Egreso)
+      if (balanceCuentaActual < monto) {
+        await db.query('ROLLBACK');
+        return res.status(400).json({ error: `Saldo insuficiente en ${nombreCuenta} ($${balanceCuentaActual}) para recargar BetPlay` });
+      }
+
+      // Descontar saldo de la cuenta real
+      await db.query('UPDATE cuentas SET balance_actual = balance_actual - $1 WHERE id = $2 AND usuario_id = $3', [monto, cuenta_id, usuario_id]);
+
+      // Registrar transacción en el historial financiero
+      await db.query(
+        `INSERT INTO transacciones (usuario_id, descripcion, monto, tipo_movimiento, cuenta_id, fecha_registro) 
+         VALUES ($1, $2, $3, 'egreso', $4, NOW())`,
+        [usuario_id, `Inversión: Recarga BetPlay`, monto, cuenta_id]
+      );
+    } else {
+      // Retiro de BetPlay = Dinero entra a la cuenta real (Ingreso)
+      // Aumentar saldo de la cuenta real
+      await db.query('UPDATE cuentas SET balance_actual = balance_actual + $1 WHERE id = $2 AND usuario_id = $3', [monto, cuenta_id, usuario_id]);
+
+      // Registrar transacción en el historial financiero
+      await db.query(
+        `INSERT INTO transacciones (usuario_id, descripcion, monto, tipo_movimiento, cuenta_id, fecha_registro) 
+         VALUES ($1, $2, $3, 'ingreso', $4, NOW())`,
+        [usuario_id, `Inversión: Retiro BetPlay`, monto, cuenta_id]
+      );
+    }
+
+    // 3. Actualizar saldo en BetPlay
     const updateRes = await db.query(
       'UPDATE betplay_saldo SET saldo_actual = $1, fecha_actualizacion = NOW() WHERE usuario_id = $2 RETURNING saldo_actual::float',
       [nuevoSaldo, usuario_id]
