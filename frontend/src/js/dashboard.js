@@ -2415,6 +2415,10 @@ async function verificarAutenticacion() {
     if (configNombre) {
         configNombre.textContent = user.nombre;
     }
+    const configAvatarChar = document.getElementById('config-user-avatar-char');
+    if (configAvatarChar && user.nombre) {
+        configAvatarChar.textContent = user.nombre.trim().charAt(0).toUpperCase();
+    }
 
     // Cargar los datos dinámicos de forma segura
     await cargarDashboard();
