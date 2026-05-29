@@ -4,6 +4,8 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Aura Finance - Dashboard</title>
+    <!-- Chart.js para analítica avanzada -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
         tailwind = {
@@ -410,8 +412,23 @@
                     <h3 class="font-headline-md text-headline-md font-bold text-primary tracking-wider">Mis Finanzas y Cuentas</h3>
                     <span class="material-symbols-outlined text-primary opacity-50 text-[24px]">account_balance_wallet</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="cuentas-desglosadas-grid">
-                    <!-- Generado dinámicamente con JS -->
+                <!-- Layout responsivo: Cuentas y Gráfico de Dona -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" id="cuentas-desglosadas-grid">
+                        <!-- Generado dinámicamente con JS -->
+                    </div>
+                    <div class="glass-panel rounded-3xl p-6 border border-outline-variant/30 flex flex-col gap-4 bg-gradient-to-br from-surface to-background min-h-[350px]">
+                        <h4 class="font-headline-sm text-lg font-bold text-primary tracking-wide flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[20px]">pie_chart</span>
+                            <span>Distribución de Egresos</span>
+                        </h4>
+                        <div class="flex-1 flex items-center justify-center relative w-full h-[220px]">
+                            <canvas id="chart-egresos-categorias"></canvas>
+                            <div id="chart-egresos-no-data" class="absolute inset-0 flex items-center justify-center text-xs text-on-surface-variant font-medium bg-background/50 rounded-2xl hidden">
+                                No hay egresos registrados este mes
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -472,6 +489,13 @@
                                 <span class="text-xs text-on-surface font-medium">Node.js Express (Puerto 5000)</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="flex flex-col gap-4 mt-4 pt-4 border-t border-outline-variant/30">
+                        <button type="button" id="btn-cerrar-sesion" class="w-full py-3 rounded-xl border border-error text-error hover:bg-error/10 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors duration-200">
+                            <span class="material-symbols-outlined text-[16px]">logout</span>
+                            <span>Cerrar Sesión</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -555,6 +579,12 @@
                                 </div>
                             </div>
                             
+                            <!-- Contenedor de Advertencia de Riesgo Dinámica -->
+                            <div id="apuesta-risk-alert" class="hidden p-3 rounded-xl bg-error-container/20 border border-error/30 text-error text-[11px] font-semibold flex items-start gap-2">
+                                <span class="material-symbols-outlined text-[16px] mt-0.5">warning</span>
+                                <span id="apuesta-risk-alert-text">Advertencia de gestión de bankroll.</span>
+                            </div>
+
                             <button type="submit" class="w-full py-3.5 mt-2 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:scale-103 active:scale-97 transition-transform shadow-lg">
                                 <span class="material-symbols-outlined text-[16px]">publish</span>
                                 <span>Colocar Apuesta</span>
@@ -687,6 +717,20 @@
                     </div>
                 </div>
 
+                <!-- Gráfico de Curva de Retorno (Línea) -->
+                <div class="glass-panel rounded-3xl p-6 lg:p-8 border border-outline-variant/30 flex flex-col gap-4 bg-gradient-to-br from-surface to-background min-h-[350px]">
+                    <h4 class="font-headline-sm text-lg font-bold text-on-secondary-container tracking-wide flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">trending_up</span>
+                        <span>Curva de Rendimiento / Beneficio Acumulado (BetPlay)</span>
+                    </h4>
+                    <div class="flex-1 flex items-center justify-center relative w-full h-[250px] lg:h-[300px]">
+                        <canvas id="chart-tendencia-betplay"></canvas>
+                        <div id="chart-betplay-no-data" class="absolute inset-0 flex items-center justify-center text-xs text-on-surface-variant font-medium bg-background/50 rounded-2xl hidden">
+                            Registra y resuelve al menos una apuesta para visualizar la curva de rendimiento
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Desglose de Volúmenes -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Distribución de Estados -->
@@ -748,6 +792,86 @@
             <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 600;">add</span>
         </button>
     </main>
+
+    <!-- ========================================== -->
+    <!-- CONTEXTO DE AUTENTICACIÓN: LOGIN/REGISTRO -->
+    <!-- ========================================== -->
+    <div id="auth-container" class="fixed inset-0 bg-background/95 backdrop-blur-2xl z-50 flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md p-8 rounded-3xl premium-card-glow border border-outline-variant/40 flex flex-col gap-6 bg-gradient-to-br from-surface to-background animate-fade-in">
+            <div class="text-center space-y-2">
+                <span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase tracking-widest border border-primary/20">
+                    🔐 Acceso Seguro Aura
+                </span>
+                <h2 id="auth-titulo" class="font-headline-lg text-3xl font-extrabold text-on-background tracking-tight">Iniciar Sesión</h2>
+                <p id="auth-subtitulo" class="text-on-surface-variant text-sm">Gestiona tu patrimonio con seguridad de nivel bancario.</p>
+            </div>
+            
+            <!-- Alerta de Errores de Autenticación -->
+            <div id="auth-error-alert" class="hidden p-4 rounded-xl bg-error-container/20 border border-error/30 text-error text-xs font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">error</span>
+                <span id="auth-error-message">Error al procesar la autenticación.</span>
+            </div>
+
+            <!-- Formulario de Iniciar Sesión / Registro -->
+            <form id="form-auth" class="flex flex-col gap-5">
+                <!-- Campo Nombre (Solo visible en Registro) -->
+                <div id="auth-wrapper-nombre" class="hidden flex flex-col gap-1.5">
+                    <label for="auth-nombre" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Nombre Completo</label>
+                    <input type="text" id="auth-nombre" placeholder="Tu nombre" 
+                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="auth-email" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Correo Electrónico</label>
+                    <input type="email" id="auth-email" required placeholder="christian@aurahub.com" 
+                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="auth-password" class="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">Contraseña</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••••••" 
+                           class="bg-surface-container border border-outline-variant rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-full transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40" />
+                </div>
+
+                <button type="submit" id="btn-auth-submit" class="w-full py-3.5 mt-2 rounded-xl bg-primary text-background font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:scale-103 active:scale-97 transition-transform shadow-lg">
+                    <span class="material-symbols-outlined text-[16px]">login</span>
+                    <span id="btn-auth-text">Ingresar al Sistema</span>
+                </button>
+            </form>
+
+            <!-- Alternador entre Login y Registro -->
+            <div class="text-center text-xs text-on-surface-variant border-t border-outline-variant/20 pt-4">
+                <span id="auth-toggle-prompt">¿No tienes una cuenta aún?</span>
+                <button id="btn-auth-toggle" class="text-primary font-bold hover:underline ml-1 outline-none">Registrarse gratis</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: ADVERTENCIA DE GESTIÓN DE BANKROLL (STAKING) -->
+    <!-- ========================================== -->
+    <div id="modal-risk-warning" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[110] hidden animate-fade-in">
+        <div class="glass-panel max-w-md w-full mx-4 rounded-3xl p-8 flex flex-col gap-6 shadow-2xl bg-gradient-to-br from-surface to-background border border-error/30 premium-card-glow relative">
+            <div class="text-center space-y-3">
+                <div class="w-16 h-16 rounded-full bg-error-container/20 text-error flex items-center justify-center mx-auto animate-pulse">
+                    <span class="material-symbols-outlined text-[36px]" id="risk-modal-icon">warning</span>
+                </div>
+                <h3 id="risk-modal-titulo" class="font-headline-md text-2xl font-bold text-error tracking-wide">Alerta de Bankroll</h3>
+                <p id="risk-modal-mensaje" class="text-on-surface-variant text-xs leading-relaxed">
+                    Estás a punto de arriesgar una fracción muy alta de tu banca disponible. Arriesgar demasiado capital puede comprometer seriamente tu rentabilidad a largo plazo.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mt-2">
+                <button type="button" id="btn-risk-correct" class="py-3 rounded-xl border border-outline-variant text-on-surface hover:bg-surface-container-high font-bold text-xs uppercase tracking-wider transition-all">
+                    Corregir Monto
+                </button>
+                <button type="button" id="btn-risk-continue" class="py-3 rounded-xl bg-error text-background font-bold text-xs uppercase tracking-wider hover:bg-error-container transition-all shadow-lg">
+                    Apostar de todos modos
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-obligacion" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] hidden">
         <div class="glass-panel max-w-md w-full mx-4 rounded-3xl p-6 flex flex-col justify-between shadow-2xl bg-gradient-to-br from-surface to-background border border-outline-variant relative h-[98vh] overflow-y-auto scroll-hide">

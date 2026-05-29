@@ -3,9 +3,82 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
     ? 'http://localhost:5000/api'
     : 'https://control-yonf.onrender.com/api'; // Conectado a tu servidor real de Render
 
+// Helper para obtener las cabeceras con el token de autenticación dinámicamente
+function getHeaders() {
+    const token = localStorage.getItem('token');
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+// ==========================================
+// MÓDULO DE AUTENTICACIÓN (NUEVO)
+// ==========================================
+
+export async function loginUser(email, password) {
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al iniciar sesión');
+        }
+        return data;
+    } catch (error) {
+        console.error('Error en loginUser:', error);
+        throw error;
+    }
+}
+
+export async function registerUser(nombre, email, password) {
+    try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email, password })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al registrar usuario');
+        }
+        return data;
+    } catch (error) {
+        console.error('Error en registerUser:', error);
+        throw error;
+    }
+}
+
+export async function fetchMe() {
+    try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Error al obtener perfil del servidor');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error en fetchMe:', error);
+        return null;
+    }
+}
+
+// ==========================================
+// MÓDULO FINANCIERO (PATRIMONIO)
+// ==========================================
+
 export async function fetchDashboardData() {
     try {
-        const response = await fetch(`${API_URL}/dashboard`);
+        const response = await fetch(`${API_URL}/dashboard`, {
+            headers: getHeaders()
+        });
         if (!response.ok) {
             throw new Error('Error en la respuesta del servidor');
         }
@@ -20,9 +93,7 @@ export async function crearObligacion(data) {
     try {
         const response = await fetch(`${API_URL}/obligaciones`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         if (!response.ok) {
@@ -39,9 +110,7 @@ export async function crearTransaccion(data) {
     try {
         const response = await fetch(`${API_URL}/transacciones`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         if (!response.ok) {
@@ -58,9 +127,7 @@ export async function actualizarRegistro(id, tipo, data) {
     try {
         const response = await fetch(`${API_URL}/${tipo}/${id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         if (!response.ok) {
@@ -76,7 +143,8 @@ export async function actualizarRegistro(id, tipo, data) {
 export async function eliminarRegistro(id, tipo) {
     try {
         const response = await fetch(`${API_URL}/${tipo}/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: getHeaders()
         });
         if (!response.ok) {
             throw new Error(`Error al eliminar el registro de tipo ${tipo}`);
@@ -94,7 +162,9 @@ export async function eliminarRegistro(id, tipo) {
 
 export async function fetchInversionesData() {
     try {
-        const response = await fetch(`${API_URL}/inversiones`);
+        const response = await fetch(`${API_URL}/inversiones`, {
+            headers: getHeaders()
+        });
         if (!response.ok) {
             throw new Error('Error en la respuesta del servidor');
         }
@@ -109,9 +179,7 @@ export async function actualizarSaldoBetPlay(monto, tipoMovimiento, cuentaId) {
     try {
         const response = await fetch(`${API_URL}/inversiones/saldo`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify({ monto, tipo_movimiento: tipoMovimiento, cuenta_id: cuentaId })
         });
         if (!response.ok) {
@@ -129,9 +197,7 @@ export async function crearApuesta(data) {
     try {
         const response = await fetch(`${API_URL}/inversiones/apuestas`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         if (!response.ok) {
@@ -149,9 +215,7 @@ export async function actualizarEstadoApuesta(id, nuevoEstado) {
     try {
         const response = await fetch(`${API_URL}/inversiones/apuestas/${id}/estado`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getHeaders(),
             body: JSON.stringify({ nuevoEstado })
         });
         if (!response.ok) {
@@ -168,7 +232,8 @@ export async function actualizarEstadoApuesta(id, nuevoEstado) {
 export async function eliminarApuesta(id) {
     try {
         const response = await fetch(`${API_URL}/inversiones/apuestas/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: getHeaders()
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -180,4 +245,3 @@ export async function eliminarApuesta(id) {
         throw error;
     }
 }
-

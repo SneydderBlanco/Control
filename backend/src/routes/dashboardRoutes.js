@@ -11,10 +11,18 @@ const {
   actualizarSaldoBetPlay,
   crearApuesta,
   actualizarEstadoApuesta,
-  eliminarApuesta
+  eliminarApuesta,
+  processSubscriptions
 } = require('../controllers/dashboardController');
+const { authenticateToken } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+
+// Webhook Cron para suscripciones automatizadas (Excluido de autenticación JWT de usuario, protegido por X-Cron-Key)
+router.post('/cron/process-subscriptions', processSubscriptions);
+
+// Aplicar middleware de autenticación a todas las rutas financieras y de apuestas del usuario
+router.use(authenticateToken);
 
 // ==========================================
 // MÓDULO FINANCIERO (PATRIMONIO)
@@ -39,4 +47,3 @@ router.put('/inversiones/apuestas/:id/estado', actualizarEstadoApuesta);
 router.delete('/inversiones/apuestas/:id', eliminarApuesta);
 
 module.exports = router;
-

@@ -8,7 +8,10 @@ import {
     actualizarSaldoBetPlay,
     crearApuesta,
     actualizarEstadoApuesta,
-    eliminarApuesta
+    eliminarApuesta,
+    loginUser,
+    registerUser,
+    fetchMe
 } from './api.js';
 
 // 0. Variables globales para el control de la SPA (Cuentas, Obligaciones, Historial, Calendario)
@@ -19,6 +22,14 @@ let calendarioMesActual = new Date().getMonth();
 let calendarioAnioActual = new Date().getFullYear();
 let seccionActiva = 'inicio';
 let fpInstance = null; // Instancia global de Flatpickr
+
+// Variables para los Gráficos de Analítica (Chart.js)
+let chartEgresos = null;
+let chartBetPlay = null;
+
+// Lógica de Autenticación
+let authModo = 'login'; // 'login' o 'register'
+let usuarioActual = null;
 
 // Variables globales para el Módulo de Inversiones (BetPlay)
 let moduloActivo = 'hub'; // 'hub', 'finanzas', 'inversiones'
@@ -389,6 +400,10 @@ async function cargarDashboard() {
     } else if (seccionActiva === 'historial') {
         renderHistorial();
     }
+
+    // K. Actualizar gráficos analíticos de forma reactiva
+    actualizarGraficoEgresos();
+    actualizarGraficoBetPlay();
 }
 
 // 4. LÓGICA DE CONTROL DEL MODAL Y REGISTRO MULTIPROPÓSITO (FAB)
@@ -2142,16 +2157,62 @@ if (modalBetPlaySaldo) {
 }
 
 // Oyentes para el Formulario de Registrar Apuesta
+// Variable global para capturar la apuesta que está en espera de confirmación de riesgo
+let apuestaPendienteRiesgo = null;
+
+// Helper para validar dinámicamente el riesgo en el formulario como se digita
+function validarRiesgoApuesta() {
+    const inputMonto = document.getElementById('apuesta-monto');
+    const inputCuota = document.getElementById('apuesta-cuota');
+    const alertEl = document.getElementById('apuesta-risk-alert');
+    const alertTextEl = document.getElementById('apuesta-risk-alert-text');
+    
+    if (!inputMonto || !inputCuota || !alertEl || !alertTextEl) return;
+
+    const monto = parseFloat(inputMonto.value);
+    const cuota = parseFloat(inputCuota.value);
+
+    if (isNaN(monto) || monto <= 0 || betplaySaldo <= 0) {
+        alertEl.classList.add('hidden');
+        return;
+    }
+
+    const porcentajeBanca = (monto / betplaySaldo) * 100;
+    
+    if (porcentajeBanca > 5) {
+        alertEl.classList.remove('hidden');
+        if (!isNaN(cuota) && cuota > 5.00) {
+            const stake1 = formatoMoneda(betplaySaldo * 0.01);
+            const stake2 = formatoMoneda(betplaySaldo * 0.02);
+            alertTextEl.innerHTML = `<strong>⚠️ ALTO RIESGO (Cuota > 5.0):</strong> Estás arriesgando el <strong>${porcentajeBanca.toFixed(1)}%</strong> de tu capital en una cuota arriesgada. Se sugiere un stake del 1% o 2% (entre ${stake1} y ${stake2}).`;
+            alertEl.className = "p-3 rounded-xl bg-error-container/20 border border-error/50 text-error text-[11px] font-semibold flex items-start gap-2 premium-card-glow";
+        } else {
+            const limite5 = formatoMoneda(betplaySaldo * 0.05);
+            alertTextEl.innerHTML = `<strong>⚠️ Alerta de Staking:</strong> Estás arriesgando el <strong>${porcentajeBanca.toFixed(1)}%</strong> de tu bankroll. Se recomienda no exceder el 5% (${limite5}) por apuesta.`;
+            alertEl.className = "p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[11px] font-semibold flex items-start gap-2";
+        }
+    } else {
+        alertEl.classList.add('hidden');
+    }
+}
+
+// Oyentes para el Formulario de Registrar Apuesta
 const formRegistrarApuesta = document.getElementById('form-registrar-apuesta');
 if (formRegistrarApuesta) {
+    const inputMonto = document.getElementById('apuesta-monto');
+    const inputCuota = document.getElementById('apuesta-cuota');
+
+    if (inputMonto) inputMonto.addEventListener('input', validarRiesgoApuesta);
+    if (inputCuota) inputCuota.addEventListener('input', validarRiesgoApuesta);
+
     formRegistrarApuesta.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(formRegistrarApuesta);
+        
         const data = {
-            evento: formData.get('evento'),
-            pronostico: formData.get('pronostico'),
-            cuota: parseFloat(formData.get('cuota')),
-            valor_apostado: parseFloat(formData.get('valor_apostado'))
+            evento: document.getElementById('apuesta-evento').value,
+            pronostico: document.getElementById('apuesta-pronostico').value,
+            cuota: parseFloat(document.getElementById('apuesta-cuota').value),
+            valor_apostado: parseFloat(document.getElementById('apuesta-monto').value)
         };
 
         if (!data.evento || !data.pronostico || isNaN(data.cuota) || isNaN(data.valor_apostado)) {
@@ -2164,14 +2225,83 @@ if (formRegistrarApuesta) {
             return;
         }
 
-        try {
-            const res = await crearApuesta(data);
-            if (res) {
-                formRegistrarApuesta.reset();
-                await cargarInversiones();
+        const porcentajeBanca = (data.valor_apostado / betplaySaldo) * 100;
+
+        if (porcentajeBanca > 5) {
+            // Interceptar y mostrar la modal de advertencia glassmorphic
+            apuestaPendienteRiesgo = data;
+            const modalRisk = document.getElementById('modal-risk-warning');
+            const riskTitulo = document.getElementById('risk-modal-titulo');
+            const riskIcono = document.getElementById('risk-modal-icon');
+            const riskMensaje = document.getElementById('risk-modal-mensaje');
+
+            if (modalRisk) {
+                if (data.cuota > 5.00) {
+                    const stake1 = formatoMoneda(betplaySaldo * 0.01);
+                    const stake2 = formatoMoneda(betplaySaldo * 0.02);
+                    if (riskTitulo) riskTitulo.textContent = 'Alerta de Alto Riesgo (Cuota Alta)';
+                    if (riskIcono) riskIcono.textContent = 'bolt';
+                    if (riskIcono) {
+                        riskIcono.parentElement.className = 'w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto animate-pulse';
+                    }
+                    if (riskMensaje) {
+                        riskMensaje.innerHTML = `⚠️ <strong>ALERTA DE ALTO RIESGO:</strong> Para cuotas superiores a 5.00 (Cuota ingresada: <strong>${data.cuota.toFixed(2)}</strong>), la probabilidad estadística de acierto disminuye drásticamente.<br><br>Se recomienda utilizar un Stake conservador del <strong>1% o 2%</strong> (entre <strong>${stake1}</strong> y <strong>${stake2} COP</strong>) para proteger tu capital de la ruina matemática.<br><br>¿Deseas corregir el monto o continuar de todos modos?`;
+                    }
+                } else {
+                    const limite5 = formatoMoneda(betplaySaldo * 0.05);
+                    if (riskTitulo) riskTitulo.textContent = 'Alerta de Bankroll (Staking)';
+                    if (riskIcono) riskIcono.textContent = 'warning';
+                    if (riskIcono) {
+                        riskIcono.parentElement.className = 'w-16 h-16 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center mx-auto animate-pulse';
+                    }
+                    if (riskMensaje) {
+                        riskMensaje.innerHTML = `La apuesta propuesta es de <strong>${formatoMoneda(data.valor_apostado)}</strong>, lo que representa el <strong>${porcentajeBanca.toFixed(1)}%</strong> de tu saldo disponible (<strong>${formatoMoneda(betplaySaldo)}</strong>).<br><br>Arriesgar más del 5% del bankroll (máximo sugerido: <strong>${limite5} COP</strong>) incrementa significativamente el riesgo de pérdida total del capital.<br><br>¿Deseas corregir el monto o continuar de todos modos?`;
+                    }
+                }
+                modalRisk.classList.remove('hidden');
             }
-        } catch (err) {
-            alert(err.message || 'Error al registrar la apuesta');
+            return;
+        }
+
+        // Si cumple la regla de bankroll, procesa directamente
+        await procesarColocacionApuesta(data);
+    });
+}
+
+async function procesarColocacionApuesta(data) {
+    try {
+        const res = await crearApuesta(data);
+        if (res) {
+            formRegistrarApuesta.reset();
+            const alertEl = document.getElementById('apuesta-risk-alert');
+            if (alertEl) alertEl.classList.add('hidden');
+            await cargarInversiones();
+        }
+    } catch (err) {
+        alert(err.message || 'Error al registrar la apuesta');
+    }
+}
+
+// Oyentes para botones del modal de riesgo
+const btnRiskCorrect = document.getElementById('btn-risk-correct');
+const btnRiskContinue = document.getElementById('btn-risk-continue');
+const modalRiskEl = document.getElementById('modal-risk-warning');
+
+if (btnRiskCorrect) {
+    btnRiskCorrect.addEventListener('click', () => {
+        if (modalRiskEl) modalRiskEl.classList.add('hidden');
+        apuestaPendienteRiesgo = null;
+        const inputMonto = document.getElementById('apuesta-monto');
+        if (inputMonto) inputMonto.focus();
+    });
+}
+
+if (btnRiskContinue) {
+    btnRiskContinue.addEventListener('click', async () => {
+        if (modalRiskEl) modalRiskEl.classList.add('hidden');
+        if (apuestaPendienteRiesgo) {
+            await procesarColocacionApuesta(apuestaPendienteRiesgo);
+            apuestaPendienteRiesgo = null;
         }
     });
 }
@@ -2246,10 +2376,459 @@ if (filtroHistorialEstado) {
 }
 
 
-// Ejecutar la carga y pre-cargar en background iniciando en el Hub Central
-document.addEventListener('DOMContentLoaded', () => {
+// ==========================================================================
+// SECCIÓN DE AUTENTICACIÓN Y GESTIÓN DE SESIÓN (NUEVO)
+// ==========================================================================
+
+async function verificarAutenticacion() {
+    const token = localStorage.getItem('token');
+    const authContainer = document.getElementById('auth-container');
+    const headerTitle = document.getElementById('header-title');
+
+    if (!token) {
+        if (authContainer) authContainer.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        return false;
+    }
+
+    const user = await fetchMe();
+    if (!user) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (authContainer) authContainer.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        return false;
+    }
+
+    usuarioActual = user;
+    localStorage.setItem('user', JSON.stringify(user));
+    if (authContainer) authContainer.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    
+    // Cambiar saludo en el header
+    if (headerTitle) {
+        headerTitle.textContent = `¡Bienvenido, ${user.nombre}!`;
+    }
+
+    // Actualizar nombre en el panel de configuración
+    const configNombre = document.getElementById('config-nombre-usuario');
+    if (configNombre) {
+        configNombre.textContent = user.nombre;
+    }
+
+    // Cargar los datos dinámicos de forma segura
+    await cargarDashboard();
+    await cargarInversiones();
+    return true;
+}
+
+function cerrarSesion() {
+    if (confirm('¿Estás seguro de que deseas cerrar sesión en Aura Hub?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Destruir gráficos previos para evitar fugas de memoria o caché
+        if (chartEgresos) {
+            chartEgresos.destroy();
+            chartEgresos = null;
+        }
+        if (chartBetPlay) {
+            chartBetPlay.destroy();
+            chartBetPlay = null;
+        }
+
+        // Forzar recarga visual limpia
+        window.location.reload();
+    }
+}
+
+// ==========================================================================
+// GRÁFICOS ANALÍTICOS (CHART.JS - NUEVO)
+// ==========================================================================
+
+function actualizarGraficoEgresos() {
+    const canvas = document.getElementById('chart-egresos-categorias');
+    const noDataEl = document.getElementById('chart-egresos-no-data');
+    if (!canvas) return;
+
+    // Obtener los egresos del historial de transacciones del MES en curso
+    const hoy = new Date();
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const mesActualStr = meses[hoy.getMonth()]; // ej: "may"
+    const anioActual = hoy.getFullYear();
+
+    const egresosDelMes = transaccionesHistorial.filter(t => {
+        const esEgreso = t.tipo_movimiento === 'egreso';
+        const contieneMes = t.fecha && t.fecha.toLowerCase().includes(mesActualStr);
+        const contieneAnio = t.fecha && t.fecha.includes(String(anioActual));
+        return esEgreso && contieneMes && contieneAnio;
+    });
+
+    if (egresosDelMes.length === 0) {
+        if (noDataEl) noDataEl.classList.remove('hidden');
+        if (chartEgresos) {
+            chartEgresos.destroy();
+            chartEgresos = null;
+        }
+        return;
+    }
+
+    if (noDataEl) noDataEl.classList.add('hidden');
+
+    // Agrupar por categoría
+    const categorias = {};
+    egresosDelMes.forEach(t => {
+        let cat = 'Otros';
+        const parts = t.descripcion.split(' - ');
+        if (parts.length > 1) {
+            cat = parts[1];
+        } else if (t.descripcion.startsWith('Pago mensual -')) {
+            cat = 'Suscripciones';
+        } else if (t.descripcion.toLowerCase().includes('apuesta')) {
+            cat = 'Apuestas';
+        } else if (t.descripcion.toLowerCase().includes('recarga')) {
+            cat = 'Inversión';
+        }
+        const montoAbs = Math.abs(t.monto);
+        categorias[cat] = (categorias[cat] || 0) + montoAbs;
+    });
+
+    const labels = Object.keys(categorias);
+    const data = Object.values(categorias);
+
+    if (labels.length === 0) {
+        if (noDataEl) noDataEl.classList.remove('hidden');
+        return;
+    }
+
+    // Paleta de colores Premium de Aura Hub
+    const colors = [
+        '#adc6ff', // primary (azul claro)
+        '#c4abff', // secondary (violeta claro)
+        '#ffb4ab', // error (rosa suave)
+        '#689fff', // azul eléctrico
+        '#e2e2e9', // gris claro
+        '#571bc1'  // violeta profundo
+    ];
+
+    if (chartEgresos) {
+        chartEgresos.data.labels = labels;
+        chartEgresos.data.datasets[0].data = data;
+        chartEgresos.update();
+    } else {
+        const ctx = canvas.getContext('2d');
+        chartEgresos = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: '#131315', 
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#c2c6d6',
+                            font: {
+                                family: 'Inter',
+                                size: 10
+                            },
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${formatoMoneda(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+}
+
+async function actualizarGraficoBetPlay() {
+    const canvas = document.getElementById('chart-tendencia-betplay');
+    const noDataEl = document.getElementById('chart-betplay-no-data');
+    if (!canvas) return;
+
+    // Cargar apuestas históricas si no están presentes
+    if (!betplayApuestas || betplayApuestas.length === 0) {
+        const invData = await fetchInversionesData();
+        if (invData) {
+            betplayApuestas = invData.apuestas || [];
+        }
+    }
+
+    // Filtrar solo apuestas resueltas ('ganada' o 'perdida') y ordenarlas cronológicamente
+    const apuestasResueltas = betplayApuestas
+        .filter(a => a.estado === 'ganada' || a.estado === 'perdida')
+        .sort((a, b) => new Date(a.fecha_registro || a.fecha) - new Date(b.fecha_registro || b.fecha));
+
+    if (apuestasResueltas.length === 0) {
+        if (noDataEl) noDataEl.classList.remove('hidden');
+        if (chartBetPlay) {
+            chartBetPlay.destroy();
+            chartBetPlay = null;
+        }
+        return;
+    }
+
+    if (noDataEl) noDataEl.classList.add('hidden');
+
+    // Calcular beneficio acumulado paso a paso
+    let acumulado = 0;
+    const datosBeneficio = [0];
+    const etiquetas = ['Inicio'];
+
+    apuestasResueltas.forEach((a, index) => {
+        if (a.estado === 'ganada') {
+            acumulado += parseFloat(a.valor_apostado) * (parseFloat(a.cuota) - 1);
+        } else if (a.estado === 'perdida') {
+            acumulado -= parseFloat(a.valor_apostado);
+        }
+        datosBeneficio.push(acumulado);
+        
+        const dateObj = new Date(a.fecha_registro || a.fecha);
+        const dia = dateObj.getDate();
+        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const mes = meses[dateObj.getMonth()];
+        etiquetas.push(`${dia} ${mes} (${index + 1}º)`);
+    });
+
+    if (chartBetPlay) {
+        chartBetPlay.data.labels = etiquetas;
+        chartBetPlay.data.datasets[0].data = datosBeneficio;
+        chartBetPlay.update();
+    } else {
+        const ctx = canvas.getContext('2d');
+        
+        // Crear gradiente de fondo premium
+        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(196, 171, 255, 0.25)'); 
+        gradient.addColorStop(1, 'rgba(196, 171, 255, 0.0)');
+
+        chartBetPlay = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    label: 'Beneficio Neto',
+                    data: datosBeneficio,
+                    borderColor: '#c4abff', 
+                    borderWidth: 2.5,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#c4abff',
+                    pointBorderColor: '#131315',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 5.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` Beneficio Acumulado: ${formatoMoneda(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(66, 71, 84, 0.1)',
+                            borderColor: 'transparent'
+                        },
+                        ticks: {
+                            color: '#c2c6d6',
+                            font: { size: 8 }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(66, 71, 84, 0.1)',
+                            borderColor: 'transparent'
+                        },
+                        ticks: {
+                            color: '#c2c6d6',
+                            font: { size: 8 },
+                            callback: function(value) {
+                                return formatoMoneda(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ==========================================================================
+// INICIALIZACIÓN Y BINDING DE EVENTOS (NUEVO / REFACTORIZADO)
+// ==========================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Control de Sidebar Drawer Responsivo
+    const sidebar = document.getElementById('sidebar');
+    const sidebarInversiones = document.getElementById('sidebar-inversiones');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+    const btnCloseSidebarInversiones = document.getElementById('btn-close-sidebar-inversiones');
+
+    function cerrarSidebarMovil() {
+        if (sidebar) {
+            sidebar.classList.add('-translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+        }
+        if (sidebarInversiones) {
+            sidebarInversiones.classList.add('-translate-x-full');
+            sidebarInversiones.classList.remove('translate-x-0');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.add('hidden');
+        }
+    }
+
+    function abrirSidebarMovil() {
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('hidden');
+        }
+        if (moduloActivo === 'finanzas' && sidebar) {
+            sidebar.classList.remove('-translate-x-full');
+            sidebar.classList.add('translate-x-0');
+        } else if (moduloActivo === 'inversiones' && sidebarInversiones) {
+            sidebarInversiones.classList.remove('-translate-x-full');
+            sidebarInversiones.classList.add('translate-x-0');
+        }
+    }
+
+    if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', abrirSidebarMovil);
+    if (btnCloseSidebar) btnCloseSidebar.addEventListener('click', cerrarSidebarMovil);
+    if (btnCloseSidebarInversiones) btnCloseSidebarInversiones.addEventListener('click', cerrarSidebarMovil);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', cerrarSidebarMovil);
+
+    document.querySelectorAll('#sidebar nav a, #sidebar-inversiones nav a').forEach(link => {
+        link.addEventListener('click', cerrarSidebarMovil);
+    });
+
+    // 2. Control de los Formularios de Autenticación
+    const authContainer = document.getElementById('auth-container');
+    const formAuth = document.getElementById('form-auth');
+    const btnAuthToggle = document.getElementById('btn-auth-toggle');
+    const btnAuthSubmit = document.getElementById('btn-auth-submit');
+    const authErrorAlert = document.getElementById('auth-error-alert');
+    const authErrorMessage = document.getElementById('auth-error-message');
+
+    if (btnAuthToggle) {
+        btnAuthToggle.addEventListener('click', () => {
+            const authTitulo = document.getElementById('auth-titulo');
+            const authSubtitulo = document.getElementById('auth-subtitulo');
+            const authWrapperNombre = document.getElementById('auth-wrapper-nombre');
+            const btnAuthText = document.getElementById('btn-auth-text');
+            const authTogglePrompt = document.getElementById('auth-toggle-prompt');
+            const authNombre = document.getElementById('auth-nombre');
+
+            if (authModo === 'login') {
+                authModo = 'register';
+                if (authTitulo) authTitulo.textContent = 'Crear Cuenta';
+                if (authSubtitulo) authSubtitulo.textContent = 'Regístrate para asegurar tu control patrimonial.';
+                if (authWrapperNombre) authWrapperNombre.classList.remove('hidden');
+                if (authNombre) authNombre.required = true;
+                if (btnAuthText) btnAuthText.textContent = 'Registrarse y Comenzar';
+                if (authTogglePrompt) authTogglePrompt.textContent = '¿Ya tienes una cuenta?';
+                btnAuthToggle.textContent = 'Iniciar Sesión';
+            } else {
+                authModo = 'login';
+                if (authTitulo) authTitulo.textContent = 'Iniciar Sesión';
+                if (authSubtitulo) authSubtitulo.textContent = 'Gestiona tu patrimonio con seguridad de nivel bancario.';
+                if (authWrapperNombre) authWrapperNombre.classList.add('hidden');
+                if (authNombre) authNombre.required = false;
+                if (btnAuthText) btnAuthText.textContent = 'Ingresar al Sistema';
+                if (authTogglePrompt) authTogglePrompt.textContent = '¿No tienes una cuenta aún?';
+                btnAuthToggle.textContent = 'Registrarse gratis';
+            }
+            if (authErrorAlert) authErrorAlert.classList.add('hidden');
+        });
+    }
+
+    if (formAuth) {
+        formAuth.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const nombre = document.getElementById('auth-nombre').value;
+
+            if (authErrorAlert) authErrorAlert.classList.add('hidden');
+            if (btnAuthSubmit) btnAuthSubmit.disabled = true;
+
+            try {
+                let responseData;
+                if (authModo === 'login') {
+                    responseData = await loginUser(email, password);
+                } else {
+                    responseData = await registerUser(nombre, email, password);
+                }
+
+                if (responseData && responseData.token) {
+                    localStorage.setItem('token', responseData.token);
+                    localStorage.setItem('user', JSON.stringify(responseData.user));
+                    
+                    formAuth.reset();
+                    await verificarAutenticacion();
+                }
+            } catch (err) {
+                console.error('Error de autenticación:', err);
+                if (authErrorMessage) authErrorMessage.textContent = err.message || 'Error de comunicación con el servidor.';
+                if (authErrorAlert) authErrorAlert.classList.remove('hidden');
+            } finally {
+                if (btnAuthSubmit) btnAuthSubmit.disabled = false;
+            }
+        });
+    }
+
+    // 3. Botón de Cerrar Sesión
+    const btnLogout = document.getElementById('btn-cerrar-sesion');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', cerrarSesion);
+    }
+
+    // 4. Inicializar Flatpickr
+    const dateInput = document.getElementById('fecha_vencimiento');
+    if (dateInput) {
+        fpInstance = flatpickr(dateInput, {
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd \\de F, Y',
+            disableMobile: true,
+            theme: 'dark'
+        });
+    }
+
+    // 5. Validar sesión al ingresar
     navegarAModulo('hub');
-    cargarDashboard();
-    cargarInversiones();
+    await verificarAutenticacion();
 });
 

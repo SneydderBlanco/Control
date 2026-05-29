@@ -1,7 +1,7 @@
 const db = require('../models/db');
 
 const getDashboardData = async (req, res) => {
-  const usuario_id = 1; // ID temporal de Christian
+  const usuario_id = req.user.id;
 
   try {
     // Ejecutar consultas en paralelo para máxima eficiencia
@@ -221,7 +221,7 @@ const getDashboardData = async (req, res) => {
 
 const createObligacion = async (req, res) => {
   const { entidad, monto_total, fecha_vencimiento, tipo, categoria_icono } = req.body;
-  const usuario_id = 1; // ID temporal de Christian
+  const usuario_id = req.user.id;
   const monto_restante = monto_total; // Inicializar monto_restante igual al total
   const estado = 'pendiente'; // Estado inicial siempre pendiente
 
@@ -258,7 +258,7 @@ const createObligacion = async (req, res) => {
 
 const createTransaccion = async (req, res) => {
   const { descripcion, monto, tipo_movimiento, cuenta_id, categoria, obligacion_id } = req.body;
-  const usuario_id = 1; // ID temporal de Christian
+  const usuario_id = req.user.id;
 
   // Validación básica
   if (!descripcion || !monto || !tipo_movimiento || !cuenta_id) {
@@ -339,7 +339,7 @@ const createTransaccion = async (req, res) => {
 const updateObligacion = async (req, res) => {
   const { id } = req.params;
   const { entidad, monto_total, fecha_vencimiento, tipo, categoria_icono } = req.body;
-  const usuario_id = 1; // ID temporal de Christian
+  const usuario_id = req.user.id;
   const monto_restante = monto_total; // Restablecer monto restante en edición simple
 
   if (!entidad || !monto_total || !fecha_vencimiento || !tipo || !categoria_icono) {
@@ -377,7 +377,7 @@ const updateObligacion = async (req, res) => {
 
 const deleteObligacion = async (req, res) => {
   const { id } = req.params;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   try {
     const deleteQuery = `DELETE FROM obligaciones WHERE id = $1 AND usuario_id = $2 RETURNING *`;
@@ -397,7 +397,7 @@ const deleteObligacion = async (req, res) => {
 const updateTransaccion = async (req, res) => {
   const { id } = req.params;
   const { descripcion, monto, tipo_movimiento, cuenta_id, categoria } = req.body;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   if (!descripcion || !monto || !tipo_movimiento || !cuenta_id) {
     return res.status(400).json({ error: 'Faltan campos requeridos para actualizar la transacción' });
@@ -460,7 +460,7 @@ const updateTransaccion = async (req, res) => {
 
 const deleteTransaccion = async (req, res) => {
   const { id } = req.params;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   try {
     // 1. Obtener la transacción previa para conocer su impacto
@@ -500,7 +500,7 @@ const deleteTransaccion = async (req, res) => {
 // ==========================================
 
 const getInversionesData = async (req, res) => {
-  const usuario_id = 1; // ID temporal de Christian
+  const usuario_id = req.user.id;
   try {
     const [saldoRes, apuestasRes, estadisticasRes] = await Promise.all([
       // 1. Obtener saldo actual
@@ -549,7 +549,7 @@ const getInversionesData = async (req, res) => {
 
 const actualizarSaldoBetPlay = async (req, res) => {
   const { monto, tipo_movimiento, cuenta_id } = req.body;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   if (monto === undefined || !tipo_movimiento || !cuenta_id) {
     return res.status(400).json({ error: 'Monto, tipo de movimiento y cuenta_id son requeridos' });
@@ -631,7 +631,7 @@ const actualizarSaldoBetPlay = async (req, res) => {
 
 const crearApuesta = async (req, res) => {
   const { evento, pronostico, cuota, valor_apostado } = req.body;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   if (!evento || !pronostico || !cuota || !valor_apostado) {
     return res.status(400).json({ error: 'Faltan campos requeridos para registrar la apuesta' });
@@ -677,7 +677,7 @@ const crearApuesta = async (req, res) => {
 const actualizarEstadoApuesta = async (req, res) => {
   const { id } = req.params;
   const { nuevoEstado } = req.body; // 'ganada' o 'perdida'
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   if (nuevoEstado !== 'ganada' && nuevoEstado !== 'perdida') {
     return res.status(400).json({ error: 'El estado de resolución debe ser ganada o perdida' });
@@ -731,7 +731,7 @@ const actualizarEstadoApuesta = async (req, res) => {
 
 const eliminarApuesta = async (req, res) => {
   const { id } = req.params;
-  const usuario_id = 1;
+  const usuario_id = req.user.id;
 
   try {
     await db.query('BEGIN');
@@ -770,6 +770,157 @@ const eliminarApuesta = async (req, res) => {
   }
 };
 
+const processSubscriptions = async (req, res) => {
+  const cronKey = req.headers['x-cron-key'];
+  const expectedSecret = process.env.CRON_SECRET || 'aura_cron_secret_2026';
+
+  if (!cronKey || cronKey !== expectedSecret) {
+    return res.status(403).json({ error: 'Acceso denegado: API Key inválida.' });
+  }
+
+  try {
+    const hoy = new Date();
+    const diaHoy = hoy.getDate();
+    const mesHoy = hoy.getMonth() + 1; // 1-12
+    const anioHoy = hoy.getFullYear();
+
+    console.log(`[CRON] Iniciando procesamiento de suscripciones para el día del mes: ${diaHoy}`);
+
+    // 1. Obtener todas las obligaciones activas de tipo suscripción cuyo día de vencimiento coincida con hoy
+    const subQuery = `
+      SELECT id, usuario_id, entidad, monto_total::float, fecha_vencimiento
+      FROM obligaciones
+      WHERE tipo = 'suscripcion'
+        AND EXTRACT(DAY FROM fecha_vencimiento) = $1
+    `;
+    const subRes = await db.query(subQuery, [diaHoy]);
+    const suscripciones = subRes.rows;
+
+    console.log(`[CRON] Se encontraron ${suscripciones.length} suscripciones programadas para hoy.`);
+
+    const report = {
+      dia: diaHoy,
+      total_procesadas: suscripciones.length,
+      creadas: [],
+      omitidas: []
+    };
+
+    for (const sub of suscripciones) {
+      // 2. Verificar si ya se registró el pago este mes
+      const txCheckQuery = `
+        SELECT id FROM transacciones
+        WHERE usuario_id = $1
+          AND (obligacion_id = $2 OR descripcion ILIKE $3)
+          AND EXTRACT(MONTH FROM fecha_registro) = $4
+          AND EXTRACT(YEAR FROM fecha_registro) = $5
+      `;
+      const providerPattern = `%${sub.entidad}%`;
+      const txCheckRes = await db.query(txCheckQuery, [
+        sub.usuario_id,
+        sub.id,
+        providerPattern,
+        mesHoy,
+        anioHoy
+      ]);
+
+      if (txCheckRes.rows.length > 0) {
+        console.log(`[CRON] Omitiendo suscripción "${sub.entidad}" (Usuario ID ${sub.usuario_id}): ya fue pagada este mes.`);
+        report.omitidas.push({
+          entidad: sub.entidad,
+          usuario_id: sub.usuario_id,
+          razon: 'ya_pagada'
+        });
+        continue;
+      }
+
+      // 3. Obtener la cuenta de 'Nequi' por defecto para este usuario
+      let accountQuery = `
+        SELECT id, nombre_cuenta FROM cuentas
+        WHERE usuario_id = $1 AND nombre_cuenta ILIKE '%nequi%'
+        LIMIT 1
+      `;
+      let accountRes = await db.query(accountQuery, [sub.usuario_id]);
+      let cuentaId;
+      let nombreCuentaUsed;
+
+      if (accountRes.rows.length > 0) {
+        cuentaId = accountRes.rows[0].id;
+        nombreCuentaUsed = accountRes.rows[0].nombre_cuenta;
+      } else {
+        // Fallback a la primera cuenta del usuario
+        const fallbackRes = await db.query(
+          'SELECT id, nombre_cuenta FROM cuentas WHERE usuario_id = $1 ORDER BY id LIMIT 1',
+          [sub.usuario_id]
+        );
+        if (fallbackRes.rows.length > 0) {
+          cuentaId = fallbackRes.rows[0].id;
+          nombreCuentaUsed = fallbackRes.rows[0].nombre_cuenta;
+        } else {
+          console.warn(`[CRON] No se encontraron cuentas registradas para el Usuario ID ${sub.usuario_id}.`);
+          report.omitidas.push({
+            entidad: sub.entidad,
+            usuario_id: sub.usuario_id,
+            razon: 'sin_cuentas'
+          });
+          continue;
+        }
+      }
+
+      // 4. Registrar cobro de forma atómica
+      try {
+        await db.query('BEGIN');
+
+        // Insertar transacción de egreso
+        const insertTxQuery = `
+          INSERT INTO transacciones (usuario_id, cuenta_id, descripcion, monto, tipo_movimiento, fecha_registro, obligacion_id)
+          VALUES ($1, $2, $3, $4, 'egreso', NOW(), $5)
+          RETURNING id
+        `;
+        const descripcionFinal = `Pago mensual - ${sub.entidad}`;
+        await db.query(insertTxQuery, [
+          sub.usuario_id,
+          cuentaId,
+          descripcionFinal,
+          -sub.monto_total, 
+          sub.id
+        ]);
+
+        // Restar balance de la cuenta
+        const updateAccountQuery = `
+          UPDATE cuentas
+          SET balance_actual = balance_actual - $1
+          WHERE id = $2 AND usuario_id = $3
+        `;
+        await db.query(updateAccountQuery, [sub.monto_total, cuentaId, sub.usuario_id]);
+
+        await db.query('COMMIT');
+
+        console.log(`[CRON] Pago automático procesado con éxito para "${sub.entidad}" (Usuario ID ${sub.usuario_id}) desde la cuenta "${nombreCuentaUsed}".`);
+        report.creadas.push({
+          entidad: sub.entidad,
+          usuario_id: sub.usuario_id,
+          monto: sub.monto_total,
+          cuenta: nombreCuentaUsed
+        });
+      } catch (errTx) {
+        await db.query('ROLLBACK');
+        console.error(`[CRON] Error al procesar transacción atómica de "${sub.entidad}":`, errTx.message);
+        report.omitidas.push({
+          entidad: sub.entidad,
+          usuario_id: sub.usuario_id,
+          razon: 'error_db',
+          error: errTx.message
+        });
+      }
+    }
+
+    res.json(report);
+  } catch (error) {
+    console.error('[CRON] Error general en processSubscriptions:', error);
+    res.status(500).json({ error: 'Error interno del servidor al procesar suscripciones automáticas' });
+  }
+};
+
 module.exports = {
   getDashboardData,
   createObligacion,
@@ -782,5 +933,6 @@ module.exports = {
   actualizarSaldoBetPlay,
   crearApuesta,
   actualizarEstadoApuesta,
-  eliminarApuesta
+  eliminarApuesta,
+  processSubscriptions
 };
