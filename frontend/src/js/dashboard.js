@@ -1913,14 +1913,74 @@ function renderApuestasActivas() {
         btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             const estado = btn.getAttribute('data-estado');
-            if (confirm(`¿Resolver esta apuesta como ${estado.toUpperCase()}? Esto afectará tu saldo simulado.`)) {
-                try {
-                    const res = await actualizarEstadoApuesta(id, estado);
-                    if (res) {
-                        await cargarInversiones();
+            
+            if (estado === 'ganada') {
+                const apuesta = betplayApuestas.find(a => String(a.id) === String(id));
+                if (!apuesta) return;
+                
+                const retornoCalculado = apuesta.valor_apostado * apuesta.cuota;
+                
+                const modalPayout = document.getElementById('modal-payout-resolution');
+                const calculatedEl = document.getElementById('payout-modal-calculated');
+                const inputReal = document.getElementById('payout-real-input');
+                
+                if (modalPayout && calculatedEl && inputReal) {
+                    calculatedEl.textContent = formatoMoneda(retornoCalculado) + ' COP';
+                    inputReal.value = retornoCalculado.toFixed(2);
+                    modalPayout.classList.remove('hidden');
+                    inputReal.focus();
+                    inputReal.select();
+                    
+                    const btnConfirm = document.getElementById('btn-payout-confirm');
+                    const btnCancel = document.getElementById('btn-payout-cancel');
+                    
+                    const handleConfirm = async () => {
+                        const valorReal = parseFloat(inputReal.value);
+                        modalPayout.classList.add('hidden');
+                        cleanup();
+                        try {
+                            const res = await actualizarEstadoApuesta(id, 'ganada', isNaN(valorReal) ? retornoCalculado : valorReal);
+                            if (res) {
+                                await cargarInversiones();
+                                await cargarDashboard(); // Para actualizar saldos y flujos reales
+                            }
+                        } catch (err) {
+                            alert(err.message || 'Error al resolver la apuesta');
+                        }
+                    };
+                    
+                    const handleCancel = () => {
+                        modalPayout.classList.add('hidden');
+                        cleanup();
+                    };
+                    
+                    const handleKeyPress = (e) => {
+                        if (e.key === 'Enter') {
+                            handleConfirm();
+                        }
+                    };
+                    
+                    const cleanup = () => {
+                        btnConfirm.removeEventListener('click', handleConfirm);
+                        btnCancel.removeEventListener('click', handleCancel);
+                        inputReal.removeEventListener('keypress', handleKeyPress);
+                    };
+                    
+                    btnConfirm.addEventListener('click', handleConfirm);
+                    btnCancel.addEventListener('click', handleCancel);
+                    inputReal.addEventListener('keypress', handleKeyPress);
+                }
+            } else {
+                if (confirm(`¿Resolver esta apuesta como ${estado.toUpperCase()}? Esto afectará tu saldo simulado.`)) {
+                    try {
+                        const res = await actualizarEstadoApuesta(id, estado);
+                        if (res) {
+                            await cargarInversiones();
+                            await cargarDashboard();
+                        }
+                    } catch (err) {
+                        alert(err.message || 'Error al resolver la apuesta');
                     }
-                } catch (err) {
-                    alert(err.message || 'Error al resolver la apuesta');
                 }
             }
         });
@@ -1969,7 +2029,7 @@ function renderHistorialBetPlay() {
             ? 'bg-green-400/20 text-green-400 border border-green-400/20' 
             : 'bg-error/20 text-error border border-error/20';
         
-        const retorno = esGanada ? (apuesta.valor_apostado * apuesta.cuota) : 0;
+        const retorno = esGanada ? (apuesta.retorno_real !== null && apuesta.retorno_real !== undefined ? parseFloat(apuesta.retorno_real) : (apuesta.valor_apostado * apuesta.cuota)) : 0;
         const retornoTexto = esGanada ? formatoMoneda(retorno) : '$0';
         const retornoColor = esGanada ? 'text-green-400 font-bold' : 'text-on-surface-variant';
 
@@ -2603,7 +2663,8 @@ async function actualizarGraficoBetPlay() {
 
     apuestasResueltas.forEach((a, index) => {
         if (a.estado === 'ganada') {
-            acumulado += parseFloat(a.valor_apostado) * (parseFloat(a.cuota) - 1);
+            const ret = a.retorno_real !== null && a.retorno_real !== undefined ? parseFloat(a.retorno_real) : (parseFloat(a.valor_apostado) * parseFloat(a.cuota));
+            acumulado += ret - parseFloat(a.valor_apostado);
         } else if (a.estado === 'perdida') {
             acumulado -= parseFloat(a.valor_apostado);
         }

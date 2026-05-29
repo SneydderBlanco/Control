@@ -143,7 +143,7 @@ const getDashboardData = async (req, res) => {
       ),
       // 12. Últimas 3 apuestas para movimientos
       db.query(
-        "SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, TO_CHAR(fecha_registro, 'DD Mon, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC LIMIT 3",
+        "SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, retorno_real::float, TO_CHAR(fecha_registro, 'DD Mon, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC LIMIT 3",
         [usuario_id]
       )
     ]);
@@ -183,7 +183,7 @@ const getDashboardData = async (req, res) => {
         tipo_movimiento = 'egreso';
       } else if (b.estado === 'ganada') {
         desc = `Ganada: ${b.evento} (${b.pronostico})`;
-        monto = b.valor_apostado * b.cuota;
+        monto = b.retorno_real !== null && b.retorno_real !== undefined ? b.retorno_real : (b.valor_apostado * b.cuota);
         tipo_movimiento = 'ingreso';
       } else if (b.estado === 'perdida') {
         desc = `Perdida: ${b.evento} (${b.pronostico})`;
@@ -505,16 +505,16 @@ const getInversionesData = async (req, res) => {
     const [saldoRes, apuestasRes, estadisticasRes] = await Promise.all([
       // 1. Obtener saldo actual
       db.query('SELECT COALESCE(saldo_actual, 0)::float AS saldo_actual FROM betplay_saldo WHERE usuario_id = $1 LIMIT 1', [usuario_id]),
-      // 2. Obtener todas las apuestas ordenadas por fecha de registro descendente
-      db.query("SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC", [usuario_id]),
-      // 3. Obtener estadísticas agregadas
+      // 2. Obtener todas las apuestas ordenadas por fecha de registro descendente (incluyendo retorno_real)
+      db.query("SELECT id, evento, pronostico, cuota::float, valor_apostado::float, estado, retorno_real::float, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha FROM betplay_apuestas WHERE usuario_id = $1 ORDER BY fecha_registro DESC", [usuario_id]),
+      // 3. Obtener estadísticas agregadas (teniendo en cuenta retorno_real)
       db.query(`
         SELECT 
           COALESCE(COUNT(*), 0)::int AS total_apuestas,
           COALESCE(SUM(CASE WHEN estado = 'ganada' THEN 1 ELSE 0 END), 0)::int AS apuestas_ganadas,
           COALESCE(SUM(CASE WHEN estado = 'perdida' THEN 1 ELSE 0 END), 0)::int AS apuestas_perdidas,
           COALESCE(SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END), 0)::int AS apuestas_pendientes,
-          COALESCE(SUM(CASE WHEN estado = 'ganada' THEN valor_apostado * (cuota - 1) WHEN estado = 'perdida' THEN -valor_apostado ELSE 0 END), 0)::float AS beneficio_neto,
+          COALESCE(SUM(CASE WHEN estado = 'ganada' THEN COALESCE(retorno_real, valor_apostado * cuota) - valor_apostado WHEN estado = 'perdida' THEN -valor_apostado ELSE 0 END), 0)::float AS beneficio_neto,
           COALESCE(SUM(valor_apostado), 0)::float AS total_invertido
         FROM betplay_apuestas 
         WHERE usuario_id = $1
@@ -676,7 +676,7 @@ const crearApuesta = async (req, res) => {
 
 const actualizarEstadoApuesta = async (req, res) => {
   const { id } = req.params;
-  const { nuevoEstado } = req.body; // 'ganada' o 'perdida'
+  const { nuevoEstado, retorno_real } = req.body; // 'ganada' o 'perdida'
   const usuario_id = req.user.id;
 
   if (nuevoEstado !== 'ganada' && nuevoEstado !== 'perdida') {
@@ -699,10 +699,15 @@ const actualizarEstadoApuesta = async (req, res) => {
       return res.status(400).json({ error: 'Esta apuesta ya ha sido resuelta previamente' });
     }
 
-    // 2. Si es ganada, acreditar al saldo simulado: valor_apostado * cuota
+    // 2. Si es ganada, acreditar al saldo simulado: valor_apostado * cuota o retorno_real si se provee
     let saldoActualizado = null;
+    let retornoRealValue = null;
     if (nuevoEstado === 'ganada') {
-      const gananciaTotal = parseFloat(apuesta.valor_apostado) * parseFloat(apuesta.cuota);
+      const gananciaTotal = retorno_real !== undefined && retorno_real !== null 
+        ? parseFloat(retorno_real) 
+        : parseFloat(apuesta.valor_apostado) * parseFloat(apuesta.cuota);
+      
+      retornoRealValue = gananciaTotal;
       const saldoRes = await db.query('SELECT saldo_actual FROM betplay_saldo WHERE usuario_id = $1 FOR UPDATE', [usuario_id]);
       const nuevoSaldo = parseFloat(saldoRes.rows[0].saldo_actual) + gananciaTotal;
       
@@ -714,10 +719,10 @@ const actualizarEstadoApuesta = async (req, res) => {
       saldoActualizado = saldoRes.rows[0].saldo_actual;
     }
 
-    // 3. Actualizar estado de la apuesta
+    // 3. Actualizar estado de la apuesta y retorno_real
     const updateApuestaRes = await db.query(
-      "UPDATE betplay_apuestas SET estado = $1 WHERE id = $2 AND usuario_id = $3 RETURNING *, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha",
-      [nuevoEstado, id, usuario_id]
+      "UPDATE betplay_apuestas SET estado = $1, retorno_real = $2 WHERE id = $3 AND usuario_id = $4 RETURNING *, retorno_real::float AS retorno_real, TO_CHAR(fecha_registro, 'DD Mon YYYY, HH12:MI AM') AS fecha",
+      [nuevoEstado, retornoRealValue, id, usuario_id]
     );
 
     await db.query('COMMIT');

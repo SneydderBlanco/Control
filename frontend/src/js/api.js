@@ -211,12 +211,12 @@ export async function crearApuesta(data) {
     }
 }
 
-export async function actualizarEstadoApuesta(id, nuevoEstado) {
+export async function actualizarEstadoApuesta(id, nuevoEstado, retornoReal = null) {
     try {
         const response = await fetch(`${API_URL}/inversiones/apuestas/${id}/estado`, {
             method: 'PUT',
             headers: getHeaders(),
-            body: JSON.stringify({ nuevoEstado })
+            body: JSON.stringify({ nuevoEstado, retorno_real: retornoReal })
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));

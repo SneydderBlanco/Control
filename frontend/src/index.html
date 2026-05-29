@@ -873,6 +873,38 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: CONFIRMACIÓN DE RETORNO REAL (CENTAVOS/REDONDEO) [NUEVO] -->
+    <!-- ========================================== -->
+    <div id="modal-payout-resolution" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[110] hidden animate-fade-in">
+        <div class="glass-panel max-w-sm w-full mx-4 rounded-3xl p-6 flex flex-col gap-5 shadow-2xl bg-gradient-to-br from-surface to-background border border-secondary-container/30 premium-card-glow relative">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center mx-auto">
+                    <span class="material-symbols-outlined text-[28px]">workspace_premium</span>
+                </div>
+                <h3 class="font-headline-sm text-lg font-bold text-primary tracking-wide">¡Felicidades por la victoria! 🏆</h3>
+                <p id="payout-modal-mensaje" class="text-on-surface-variant text-xs leading-relaxed">
+                    Retorno calculado: <strong id="payout-modal-calculated" class="text-on-surface">0 COP</strong>. Ingresa el valor real pagado por la casa si difiere:
+                </p>
+            </div>
+            
+            <div class="flex flex-col gap-1.5">
+                <label for="payout-real-input" class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Valor Real Recibido (COP)</label>
+                <input type="number" id="payout-real-input" step="0.01" min="0" placeholder="COP" 
+                       class="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-secondary-container focus:border-secondary-container w-full outline-none text-on-surface font-semibold" />
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mt-1">
+                <button type="button" id="btn-payout-cancel" class="py-2.5 rounded-xl border border-outline-variant text-on-surface hover:bg-surface-container-high font-bold text-xs uppercase tracking-wider transition-all">
+                    Cancelar
+                </button>
+                <button type="button" id="btn-payout-confirm" class="py-2.5 rounded-xl bg-secondary-container text-on-secondary-container font-bold text-xs uppercase tracking-wider hover:scale-103 active:scale-97 transition-all shadow-lg">
+                    Confirmar y Sumar Saldo
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-obligacion" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] hidden">
         <div class="glass-panel max-w-md w-full mx-4 rounded-3xl p-6 flex flex-col justify-between shadow-2xl bg-gradient-to-br from-surface to-background border border-outline-variant relative h-[98vh] overflow-y-auto scroll-hide">
             <div>
