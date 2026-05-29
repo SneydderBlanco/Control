@@ -772,10 +772,10 @@ const eliminarApuesta = async (req, res) => {
 
 const processSubscriptions = async (req, res) => {
   const cronKey = req.headers['x-cron-key'];
-  const expectedSecret = process.env.CRON_SECRET || 'aura_cron_secret_2026';
+  const expectedSecret = process.env.CRON_SECRET;
 
-  if (!cronKey || cronKey !== expectedSecret) {
-    return res.status(403).json({ error: 'Acceso denegado: API Key inválida.' });
+  if (!expectedSecret || !cronKey || cronKey !== expectedSecret) {
+    return res.status(403).json({ error: 'Acceso denegado: X-Cron-Key inválida o no configurada.' });
   }
 
   try {
@@ -847,22 +847,36 @@ const processSubscriptions = async (req, res) => {
         cuentaId = accountRes.rows[0].id;
         nombreCuentaUsed = accountRes.rows[0].nombre_cuenta;
       } else {
-        // Fallback a la primera cuenta del usuario
-        const fallbackRes = await db.query(
-          'SELECT id, nombre_cuenta FROM cuentas WHERE usuario_id = $1 ORDER BY id LIMIT 1',
-          [sub.usuario_id]
-        );
-        if (fallbackRes.rows.length > 0) {
-          cuentaId = fallbackRes.rows[0].id;
-          nombreCuentaUsed = fallbackRes.rows[0].nombre_cuenta;
-        } else {
-          console.warn(`[CRON] No se encontraron cuentas registradas para el Usuario ID ${sub.usuario_id}.`);
-          report.omitidas.push({
-            entidad: sub.entidad,
-            usuario_id: sub.usuario_id,
-            razon: 'sin_cuentas'
-          });
-          continue;
+        // Asegurar la cuenta 'Nequi' por defecto creándola con saldo 0.00
+        try {
+          const insertCuentaQuery = `
+            INSERT INTO cuentas (usuario_id, nombre_cuenta, balance_actual)
+            VALUES ($1, 'Nequi', 0.00)
+            RETURNING id, nombre_cuenta
+          `;
+          const newCuentaRes = await db.query(insertCuentaQuery, [sub.usuario_id]);
+          cuentaId = newCuentaRes.rows[0].id;
+          nombreCuentaUsed = newCuentaRes.rows[0].nombre_cuenta;
+          console.log(`[CRON] Se creó la cuenta 'Nequi' por defecto para el Usuario ID ${sub.usuario_id}.`);
+        } catch (cuentaErr) {
+          console.error(`[CRON] Error al crear la cuenta 'Nequi' por defecto para el Usuario ID ${sub.usuario_id}:`, cuentaErr.message);
+          // Fallback a la primera cuenta del usuario en caso de error
+          const fallbackRes = await db.query(
+            'SELECT id, nombre_cuenta FROM cuentas WHERE usuario_id = $1 ORDER BY id LIMIT 1',
+            [sub.usuario_id]
+          );
+          if (fallbackRes.rows.length > 0) {
+            cuentaId = fallbackRes.rows[0].id;
+            nombreCuentaUsed = fallbackRes.rows[0].nombre_cuenta;
+          } else {
+            console.warn(`[CRON] No se encontraron cuentas registradas para el Usuario ID ${sub.usuario_id}.`);
+            report.omitidas.push({
+              entidad: sub.entidad,
+              usuario_id: sub.usuario_id,
+              razon: 'sin_cuentas'
+            });
+            continue;
+          }
         }
       }
 

@@ -2179,12 +2179,12 @@ function validarRiesgoApuesta() {
 
     const porcentajeBanca = (monto / betplaySaldo) * 100;
     
-    if (porcentajeBanca > 5) {
+    if (porcentajeBanca >= 5) {
         alertEl.classList.remove('hidden');
         if (!isNaN(cuota) && cuota > 5.00) {
             const stake1 = formatoMoneda(betplaySaldo * 0.01);
             const stake2 = formatoMoneda(betplaySaldo * 0.02);
-            alertTextEl.innerHTML = `<strong>⚠️ ALTO RIESGO (Cuota > 5.0):</strong> Estás arriesgando el <strong>${porcentajeBanca.toFixed(1)}%</strong> de tu capital en una cuota arriesgada. Se sugiere un stake del 1% o 2% (entre ${stake1} y ${stake2}).`;
+            alertTextEl.innerHTML = `<strong>🛑 CRÍTICO - RIESGO EXTREMO (Cuota > 5.0):</strong> Estás arriesgando un <strong>${porcentajeBanca.toFixed(1)}%</strong> de tu capital en una cuota con muy baja probabilidad estadística. ¡Peligro de ruina! Se sugiere un stake ultra-conservador del 1% o 2% (entre ${stake1} y ${stake2}).`;
             alertEl.className = "p-3 rounded-xl bg-error-container/20 border border-error/50 text-error text-[11px] font-semibold flex items-start gap-2 premium-card-glow";
         } else {
             const limite5 = formatoMoneda(betplaySaldo * 0.05);
@@ -2227,7 +2227,7 @@ if (formRegistrarApuesta) {
 
         const porcentajeBanca = (data.valor_apostado / betplaySaldo) * 100;
 
-        if (porcentajeBanca > 5) {
+        if (porcentajeBanca >= 5) {
             // Interceptar y mostrar la modal de advertencia glassmorphic
             apuestaPendienteRiesgo = data;
             const modalRisk = document.getElementById('modal-risk-warning');
@@ -2239,13 +2239,13 @@ if (formRegistrarApuesta) {
                 if (data.cuota > 5.00) {
                     const stake1 = formatoMoneda(betplaySaldo * 0.01);
                     const stake2 = formatoMoneda(betplaySaldo * 0.02);
-                    if (riskTitulo) riskTitulo.textContent = 'Alerta de Alto Riesgo (Cuota Alta)';
+                    if (riskTitulo) riskTitulo.textContent = 'Alerta Ultra-Estricta de Riesgo Crítico';
                     if (riskIcono) riskIcono.textContent = 'bolt';
                     if (riskIcono) {
                         riskIcono.parentElement.className = 'w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto animate-pulse';
                     }
                     if (riskMensaje) {
-                        riskMensaje.innerHTML = `⚠️ <strong>ALERTA DE ALTO RIESGO:</strong> Para cuotas superiores a 5.00 (Cuota ingresada: <strong>${data.cuota.toFixed(2)}</strong>), la probabilidad estadística de acierto disminuye drásticamente.<br><br>Se recomienda utilizar un Stake conservador del <strong>1% o 2%</strong> (entre <strong>${stake1}</strong> y <strong>${stake2} COP</strong>) para proteger tu capital de la ruina matemática.<br><br>¿Deseas corregir el monto o continuar de todos modos?`;
+                        riskMensaje.innerHTML = `🛑 <strong>ALERTA ULTRA-ESTRICTA DE RIESGO CRÍTICO:</strong> Has ingresado una cuota extremadamente alta de <strong>${data.cuota.toFixed(2)}</strong>. Estadísticamente, la probabilidad de acierto para cuotas superiores a 5.00 es menor al 15%-20%, lo que expone tu bankroll a una ruina matemática casi segura bajo un Staking del 5% o superior (estás arriesgando el <strong>${porcentajeBanca.toFixed(1)}%</strong>).<br><br><strong>ACCIÓN RECOMENDADA POR EL SISTEMA DE RIESGO:</strong> Reduce inmediatamente tu nivel de exposición a un stake conservador del <strong>1% o 2%</strong> (entre <strong>${stake1}</strong> y <strong>${stake2} COP</strong>) para blindar tu capital ante la varianza negativa.<br><br>¿Deseas corregir el monto para proteger tu cuenta o asumir el riesgo extremo bajo tu propia responsabilidad?`;
                     }
                 } else {
                     const limite5 = formatoMoneda(betplaySaldo * 0.05);
