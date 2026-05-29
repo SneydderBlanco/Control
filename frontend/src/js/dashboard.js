@@ -1774,7 +1774,8 @@ function navegarAModulo(modulo) {
             headerEl.classList.remove('w-full');
         }
         if (headerTitle) {
-            headerTitle.textContent = "¡Bienvenido, Christian!";
+            const nombreSaludo = usuarioActual && usuarioActual.nombre ? usuarioActual.nombre : 'Christian';
+            headerTitle.textContent = `¡Bienvenido, ${nombreSaludo}!`;
         }
         if (fabAddBtn) {
             fabAddBtn.classList.remove('hidden');
@@ -2408,6 +2409,10 @@ async function verificarAutenticacion() {
     // Cambiar saludo en el header
     if (headerTitle) {
         headerTitle.textContent = `¡Bienvenido, ${user.nombre}!`;
+    }
+    const headerAvatarChar = document.getElementById('header-user-avatar-char');
+    if (headerAvatarChar && user.nombre) {
+        headerAvatarChar.textContent = user.nombre.trim().charAt(0).toUpperCase();
     }
 
     // Actualizar nombre en el panel de configuración
